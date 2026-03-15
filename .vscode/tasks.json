@@ -2,9 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build & Run ScapeSociety Discord Integration",
+      "label": "Build & Run Scape Society Discord Integration",
       "type": "shell",
-      "command": "podman compose --file podman-compose.yaml up -d redis; if ($?) { podman compose --file podman-compose.yaml up chat-server }",
+      "command": "node bootstrap.js",
       "problemMatcher": [],
       "group": {
         "kind": "build",
