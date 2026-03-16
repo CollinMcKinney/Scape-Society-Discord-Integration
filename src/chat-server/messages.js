@@ -90,6 +90,7 @@ async function getMessages(actorId, actorSessionToken, limit = 50) {
 }
 
 // ---------------- Moderation ----------------
+// TODO: messages not being deleted.
 async function deleteMessage(actorId, actorSessionToken, messageId) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;

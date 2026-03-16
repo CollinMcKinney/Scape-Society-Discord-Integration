@@ -39,14 +39,14 @@ async function createUserInternal(osrs_name, disc_name, forum_name, role = Roles
 }
 
 // Public API
-async function createUser(actorId, actorSessionToken, newUserData) {
+async function createUser(actorId, actorSessionToken, osrs_name, disc_name, forum_name, password) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) throw new Error("Actor not authenticated");
 
   const actor = await datastore.get(`user:${actorId}`);
   if (!actor || actor.role < Roles.MODERATOR) throw new Error("Insufficient role");
 
-  return createUserInternal(newUserData);
+  return createUserInternal(osrs_name, disc_name, forum_name, Roles.USER, password);
 }
 
 async function listUsers(actorId, actorSessionToken) {
