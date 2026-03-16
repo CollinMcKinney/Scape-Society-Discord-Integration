@@ -3,23 +3,39 @@ const crypto = require("crypto");
 const datastore = require("./datastore");
 const auth = require("./auth");
 
+// Roles enum (matching your messages.js / users.js roles)
+// TODO: import this from Users.js to avoid duplication
+const Roles = Object.freeze({
+  Blocked: 0,
+  Guest: 1,
+  User: 2,
+  Moderator: 3,
+  Admin: 4,
+  Owner: 5,
+});
+
+// Notification types enum
 const NotificationType = Object.freeze({
   ACHIEVEMENT: "achievement",
   EVENT: "event",
   SYSTEM: "system",
 });
 
-async function addNotification(actorId, actorSessionToken, notification) {
+// ---------------- Add Notification ----------------
+// Only Moderator+ can add
+async function addNotification(actorId, actorSessionToken, type, content) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
 
-  const id = notification.id || crypto.randomUUID();
+  const actor = await datastore.get(`user:${actorId}`);
+  if (!actor || actor.role < Roles.Moderator) return false;
+
+  const id = crypto.randomUUID();
   const stored = {
     id,
     actorId,
-    type: notification.type,
-    content: notification.content,
-    targetUsers: notification.targetUsers || [],
+    type,
+    content,
     timestamp: Date.now()
   };
 
@@ -29,6 +45,7 @@ async function addNotification(actorId, actorSessionToken, notification) {
   return true;
 }
 
+// ---------------- Get Notifications ----------------
 async function getNotifications(actorId, actorSessionToken, limit = 50) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return [];
@@ -39,15 +56,13 @@ async function getNotifications(actorId, actorSessionToken, limit = 50) {
   for (const id of ids) {
     const notification = await datastore.get(`notification:${id}`);
     if (!notification) continue;
-
-    if (notification.targetUsers.length === 0 || notification.targetUsers.includes(userId)) {
-      notifications.push(notification);
-    }
+    notifications.push(notification);
   }
 
   return notifications;
 }
 
+// ---------------- Delete Notification ----------------
 async function deleteNotification(actorId, actorSessionToken, notificationId) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
@@ -58,6 +73,7 @@ async function deleteNotification(actorId, actorSessionToken, notificationId) {
   return true;
 }
 
+// ---------------- Edit Notification ----------------
 async function editNotification(actorId, actorSessionToken, notificationId, updatedFields) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
@@ -72,9 +88,9 @@ async function editNotification(actorId, actorSessionToken, notificationId, upda
 }
 
 module.exports = { 
-    NotificationType,
-    addNotification, 
-    getNotifications,
-    deleteNotification,
-    editNotification
+  NotificationType,
+  addNotification,
+  getNotifications,
+  deleteNotification,
+  editNotification
 };

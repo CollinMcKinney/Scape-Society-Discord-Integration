@@ -18,7 +18,7 @@ function hashToken(token) {
 }
 
 // Internal
-async function createUserInternal({ osrs_name, disc_name, forum_name, role = Roles.USER, hashedPass: password }) {
+async function createUserInternal(osrs_name, disc_name, forum_name, role = Roles.USER, password ) {
   console.log("Creating user with data:", { osrs_name, disc_name, forum_name, role });
 
   // if role is ROOT, check if another root user exists first and don't create a new one.

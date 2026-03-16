@@ -3,7 +3,7 @@ const datastore = require("./datastore");
 const auth = require("./auth");
 const { v4: uuidv4 } = require("uuid");
 
-// Define roles enum locally or import from user.js
+// Roles enum (define locally or import from users.js)
 const Roles = Object.freeze({
   Blocked: 0,
   Guest: 1,
@@ -14,7 +14,7 @@ const Roles = Object.freeze({
 });
 
 // ========================
-// Message Record Factory
+// Message Class
 // ========================
 class Message {
   constructor(actorId, content, id = uuidv4(), timestamp = Date.now()) {
@@ -26,17 +26,14 @@ class Message {
     this.editedContent = null;
   }
 
-  // Mark as deleted
   markDeleted() {
     this.deleted = true;
   }
 
-  // Edit message content
   edit(newContent) {
     this.editedContent = newContent;
   }
 
-  // Serialize for storage
   serialize() {
     return {
       id: this.id,
@@ -48,13 +45,11 @@ class Message {
     };
   }
 
-  // Save to datastore
   async save() {
     await datastore.set(`message:${this.id}`, this.serialize());
     await datastore.zAdd("messages", { score: this.timestamp, value: this.id });
   }
 
-  // Static method to load a message from datastore
   static async load(id) {
     const data = await datastore.get(`message:${id}`);
     if (!data) return null;
@@ -68,24 +63,27 @@ class Message {
 // ========================
 // API Functions
 // ========================
+
+// Create a new Message instance
 async function createMessage(actorId, content) {
   return new Message(actorId, content);
 }
 
-async function addMessage(actorId, actorSessionToken, message) {
+// ---------------- Add Message ----------------
+// Now `messageContent` is a string
+async function addMessage(actorId, actorSessionToken, messageContent) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
 
   const actor = await datastore.get(`user:${actorId}`);
   if (!actor || actor.role === Roles.Blocked) return false;
 
-  const existing = await datastore.exists(`message:${message.id}`);
-  if (existing) return false;
-
-  await createMessage(actorId, message.content).save();
+  const message = await createMessage(actorId, messageContent);
+  await message.save();
   return true;
 }
 
+// ---------------- Get Messages ----------------
 async function getMessages(actorId, actorSessionToken, limit = 50) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return [];
@@ -93,13 +91,13 @@ async function getMessages(actorId, actorSessionToken, limit = 50) {
   const ids = await datastore.zRange("messages", -limit, -1);
   const messages = [];
   for (const id of ids) {
-    const message = await Message.load(id);
-    if (message) messages.push(message.serialize());
+    const msg = await Message.load(id);
+    if (msg) messages.push(msg.serialize());
   }
   return messages;
 }
 
-// Moderation
+// ---------------- Moderation ----------------
 async function deleteMessage(actorId, actorSessionToken, messageId) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
@@ -130,12 +128,10 @@ async function editMessage(actorId, actorSessionToken, messageId, newContent) {
   return true;
 }
 
-module.exports = 
-{ 
-    Message,
-    createMessage, 
-    addMessage, 
-    getMessages, 
-    editMessage,
-    deleteMessage, 
+module.exports = {
+  Message,
+  addMessage,
+  getMessages,
+  editMessage,
+  deleteMessage,
 };

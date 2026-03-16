@@ -22,18 +22,14 @@ async function start() {
   console.log("Server ready!");
 
   // Create ROOT user if needed
-  const root = await users.createUserInternal({ 
-    osrs_name: "ROOT", 
-    disc_name: "ROOT#0000", 
-    forum_name: "ROOT", 
-    role: users.Roles.ROOT, 
-    hashedPass: users.hashToken("password") 
-  });
+  const root = await users.createUserInternal( 
+    "ROOT", 
+    "ROOT#0000", 
+    "ROOT", 
+    users.Roles.ROOT, 
+    users.hashToken("password"));
 
-  const sessionToken = await auth.authenticate({
-        userId: root.id,
-        hashedPass: root.hashedPass
-    });
+  const sessionToken = await auth.authenticate(root.id, root.hashedPass);
   const verifiedUserId = await auth.verifySession(root.id, sessionToken);
 
   console.log("Verified user ID from session token:", verifiedUserId);
