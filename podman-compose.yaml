@@ -10,7 +10,7 @@ services:
     image: node:20
     container_name: chat_server
     working_dir: /app
-    command: node src/chat-server/server.js
+    command: yarn run start
     depends_on:
       - redis
     env_file:

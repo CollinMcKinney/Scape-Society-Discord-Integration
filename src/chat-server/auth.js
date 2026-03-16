@@ -1,8 +1,7 @@
 // auth.js
 const crypto = require("crypto");
 const datastore = require("./datastore");
-const Roles = require("./users").Roles;
-
+const { Roles } = require("./roles");
 /**
  * Seassion time to live (TTL) in milliseconds. After this time, the session will expire and require re-authentication.
  * TODO: consider putting in .env or config file for flexibility. For demonstration, we use 1 hour.

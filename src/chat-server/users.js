@@ -2,16 +2,8 @@
 const crypto = require("crypto");
 const datastore = require("./datastore");
 const auth = require("./auth");
+const { Roles } = require("./roles");
 
-const Roles = Object.freeze({
-  BLOCKED: 0,
-  GUEST: 1,
-  USER: 2,
-  MODERATOR: 3,
-  ADMIN: 4,
-  OWNER: 5,
-  ROOT: 6
-});
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -118,8 +110,6 @@ async function updateUser(actorId, actorSessionToken, targetUser) {
 }
 
 module.exports = { 
-    Roles, 
-
     createUser, 
     listUsers, 
     getUser, 

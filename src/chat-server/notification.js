@@ -2,17 +2,7 @@
 const crypto = require("crypto");
 const datastore = require("./datastore");
 const auth = require("./auth");
-
-// Roles enum (matching your messages.js / users.js roles)
-// TODO: import this from Users.js to avoid duplication
-const Roles = Object.freeze({
-  Blocked: 0,
-  Guest: 1,
-  User: 2,
-  Moderator: 3,
-  Admin: 4,
-  Owner: 5,
-});
+const { Roles } = require("./roles");
 
 // Notification types enum
 const NotificationType = Object.freeze({
@@ -28,7 +18,7 @@ async function addNotification(actorId, actorSessionToken, type, content) {
   if (!verified) return false;
 
   const actor = await datastore.get(`user:${actorId}`);
-  if (!actor || actor.role < Roles.Moderator) return false;
+  if (!actor || actor.role < Roles.MODERATOR) return false;
 
   const id = crypto.randomUUID();
   const stored = {

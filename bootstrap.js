@@ -4,7 +4,13 @@ try {
     console.log('Installing dependencies...');
 
     // Install dependencies in the project root (/node_modules/)
-    execSync('npm install', { stdio: 'inherit' });
+    //execSync('npm install', { stdio: 'inherit' });
+
+    // Install yarn.
+    execSync('npm install -g yarn', { stdio: 'inherit' });
+
+    // yarn install dependencies
+    execSync('yarn install', { stdio: 'inherit' });
 
     // Install dependencies in the chat-server container (if needed)
     //execSync('podman compose --file podman-compose.yaml run --rm chat-server npm install', { stdio: 'inherit' });

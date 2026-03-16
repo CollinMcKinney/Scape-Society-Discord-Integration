@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const { initStorage, saveState, loadState, client } = require("./datastore");
 const auth = require("./auth");
 const users = require("./users");
+const { Roles } = require("./roles");
 
 // Import admin router
 const adminRouter = require("./admin_router");
@@ -26,7 +27,7 @@ async function start() {
     "ROOT", 
     "ROOT#0000", 
     "ROOT", 
-    users.Roles.ROOT, 
+    Roles.ROOT, 
     users.hashToken("password"));
 
   const sessionToken = await auth.authenticate(root.id, root.hashedPass);

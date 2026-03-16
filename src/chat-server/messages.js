@@ -2,16 +2,8 @@
 const datastore = require("./datastore");
 const auth = require("./auth");
 const { v4: uuidv4 } = require("uuid");
+const { Roles } = require("./roles");
 
-// Roles enum (define locally or import from users.js)
-const Roles = Object.freeze({
-  Blocked: 0,
-  Guest: 1,
-  User: 2,
-  Moderator: 3,
-  Admin: 4,
-  Owner: 5,
-});
 
 // ========================
 // Message Class
@@ -76,7 +68,7 @@ async function addMessage(actorId, actorSessionToken, messageContent) {
   if (!verified) return false;
 
   const actor = await datastore.get(`user:${actorId}`);
-  if (!actor || actor.role === Roles.Blocked) return false;
+  if (!actor || actor.role === Roles.BLOCKED) return false;
 
   const message = await createMessage(actorId, messageContent);
   await message.save();
@@ -106,7 +98,7 @@ async function deleteMessage(actorId, actorSessionToken, messageId) {
   if (!message) return false;
 
   const actor = await datastore.get(`user:${actorId}`);
-  if (!actor || actor.role < Roles.Moderator) return false;
+  if (!actor || actor.role < Roles.MODERATOR) return false;
 
   message.markDeleted();
   await message.save();
@@ -121,7 +113,7 @@ async function editMessage(actorId, actorSessionToken, messageId, newContent) {
   if (!message) return false;
 
   const actor = await datastore.get(`user:${actorId}`);
-  if (!actor || actor.role < Roles.Moderator) return false;
+  if (!actor || actor.role < Roles.MODERATOR) return false;
 
   message.edit(newContent);
   await message.save();

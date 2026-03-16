@@ -4,7 +4,7 @@
     {
       "label": "Build & Run Scape Society Discord Integration",
       "type": "shell",
-      "command": "node bootstrap.js",
+      "command": "node --trace-warnings bootstrap.js",
       "problemMatcher": [],
       "group": {
         "kind": "build",
