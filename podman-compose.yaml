@@ -14,9 +14,9 @@ services:
     depends_on:
       - redis
     env_file:
-      - .env   # <--- load the secrets from .env
+      - .env
     environment:
-      REDIS_HOST: redis   # use the service name, not localhost
+      REDIS_HOST: redis      # same Redis for both services
       REDIS_PORT: 6379
     ports:
       - "3000:3000"

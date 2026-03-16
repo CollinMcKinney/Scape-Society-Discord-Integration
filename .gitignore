@@ -13,3 +13,4 @@ node_modules/
 
 # backups
 /src/chat-server/backups/
+.env

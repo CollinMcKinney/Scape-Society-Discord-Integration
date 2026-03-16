@@ -3,35 +3,40 @@ const Redis = require("redis");
 const fs = require("fs");
 const path = require("path");
 
-// ======== Config ========
+// =====================
+// Config
+// =====================
 const redisHost = process.env.REDIS_HOST || "127.0.0.1";
 const redisPort = process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379;
 const BACKUP_DIR = path.join(__dirname, "backups");
 const BACKUP_FILE = path.join(BACKUP_DIR, "redis.json");
 
-// Auto-save config
-const MIN_INTERVAL_MS = 5000;   // 5 seconds minimum for tiny DBs
-const MAX_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes maximum for large DBs
-const SIZE_THRESHOLD_MB = 50;   // Target size to scale interval
+// Auto-save configuration
+const MIN_INTERVAL_MS = 5000;           // 5 seconds minimum
+const MAX_INTERVAL_MS = 5 * 60 * 1000;  // 5 minutes maximum
+const SIZE_THRESHOLD_MB = 50;           // Target DB size for scaling interval
 
 // Ensure backup directory exists
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
+// =====================
+// Redis Client
+// =====================
 console.log(`Initializing Redis client on ${redisHost}:${redisPort}...`);
+const client = Redis.createClient({ socket: { host: redisHost, port: redisPort } });
 
-// ======== Redis Client ========
-const client = Redis.createClient({
-  socket: { host: redisHost, port: redisPort },
-});
-
-client.on("error", (err) => console.error("Redis Client Error", err));
+client.on("error", (err) => console.error("Redis Client Error:", err));
 
 async function initStorage() {
-  await client.connect();
-  console.log("Redis connected!");
+  if (!client.isOpen) {
+    await client.connect();
+    console.log("Redis connected!");
+  }
 }
 
-// ======== Basic Operations ========
+// =====================
+// Basic Redis Operations
+// =====================
 async function get(key) {
   const data = await client.get(key);
   return data ? JSON.parse(data) : null;
@@ -53,7 +58,8 @@ async function sMembers(key) {
   return client.sMembers(key);
 }
 
-async function zAdd(key, { score, value }) {
+async function zAdd(key, { score, value } = {}) {
+  if (Array.isArray(score)) return client.zAdd(key, score); // allow batch
   return client.zAdd(key, { score, value });
 }
 
@@ -65,7 +71,9 @@ async function del(key) {
   return client.del(key);
 }
 
-// ======== Persistence (JSON backup) ========
+// =====================
+// JSON Backup / Restore
+// =====================
 async function saveState() {
   try {
     const keys = await client.keys("*");
@@ -147,19 +155,20 @@ async function loadState() {
   }
 }
 
-// ======== Dynamic Auto-save ========
+// =====================
+// Auto-save interval
+// =====================
 function getDynamicInterval() {
   try {
     if (!fs.existsSync(BACKUP_FILE)) return MIN_INTERVAL_MS;
     const stats = fs.statSync(BACKUP_FILE);
-    const sizeMB = stats.size / (1024 * 1024); // bytes → MB
-    const interval = Math.min(
+    const sizeMB = stats.size / (1024 * 1024);
+    return Math.min(
       MAX_INTERVAL_MS,
       Math.max(MIN_INTERVAL_MS, (sizeMB / SIZE_THRESHOLD_MB) * MAX_INTERVAL_MS)
     );
-    return interval;
   } catch (err) {
-    console.warn("Failed to calculate backup size. Using default interval.", err);
+    console.warn("Failed to calculate backup interval, using max.", err);
     return MAX_INTERVAL_MS;
   }
 }
@@ -182,20 +191,22 @@ function startAutoSaveDynamic() {
   setTimeout(saveAndSchedule, interval);
 }
 
-// ======== Auto-save on shutdown ========
-process.on("SIGINT", async () => {
-  console.log("Process exiting. Saving Redis state...");
+// =====================
+// Shutdown handling
+// =====================
+async function gracefulShutdown() {
+  console.log("Shutting down. Saving Redis state...");
   await saveState();
+  if (client.isOpen) await client.quit();
   process.exit();
-});
+}
 
-process.on("SIGTERM", async () => {
-  console.log("Process terminating. Saving Redis state...");
-  await saveState();
-  process.exit();
-});
+process.on("SIGINT", gracefulShutdown);
+process.on("SIGTERM", gracefulShutdown);
 
-// ======== Exports ========
+// =====================
+// Exports
+// =====================
 module.exports = {
   client,
   initStorage,
