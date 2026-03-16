@@ -14,35 +14,46 @@ const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
     return await require("./users").createUserInternal(osrs_name, disc_name, forum_name, Roles.USER, hashedPass);
   }
 
-  async function authenticate(userId, hashedPass) {
-    console.log("Authenticating user:", { userId });
-    const user = await datastore.get(`user:${userId}`);
-    console.log("User data retrieved for authentication:", user);
+async function authenticate(userId, hashedPass) {
+  console.log("Authenticating user:", { userId });
 
-    // Don't authenticate blocked users.
-    if (!user || user.role == Roles.BLOCKED) return null; // BLOCKED
+  const user = await datastore.get(`user:${userId}`);
+  console.log("User data retrieved for authentication:", user);
 
-    // Hack to allow authenticating via sessionToken instead of a hashed password.
-    if (user.sessionToken == hashedPass) {
-      console.log("Authentication successful for user:", { userId });
-      return user.sessionToken; // Return existing session token if password matches
-    }
-
-    // Verify password hash
-    if (user.hashedPass != hashedPass) {
-      console.log("Authentication failed for user:", { userId });
-      console.log("hashedPass provided:", hashedPass);
-      console.log("hashedPass expected:", user.hashedPass);
-      return null;
-    }
-
-    // Create a new session token
-    const sessionToken = crypto.randomBytes(32).toString("hex");
-    const session = { userId, created: Date.now(), expires: Date.now() + SESSION_TTL_MS };
-    await datastore.set(`session:${sessionToken}`, session);
-
-    return sessionToken;
+  // Don't authenticate blocked users
+  if (!user || user.role === Roles.BLOCKED) {
+    console.log("Authentication failed: user blocked or not found");
+    return null;
   }
+
+  // Allow authentication via session token if the session exists and is valid
+  const existingSession = await datastore.get(`session:${hashedPass}`);
+  if (existingSession && existingSession.userId === userId && existingSession.expires > Date.now()) {
+    console.log("Authenticated via existing session token for user:", { userId });
+    return hashedPass; // Return the session token itself
+  }
+
+  // Verify password hash
+  if (user.hashedPass !== hashedPass) {
+    console.log("Authentication failed for user:", { userId });
+    console.log("hashedPass provided:", hashedPass);
+    console.log("hashedPass expected:", user.hashedPass);
+    return null;
+  }
+
+  // Create a new session token
+  const sessionToken = crypto.randomBytes(32).toString("hex");
+  const newSession = {
+    userId,
+    created: Date.now(),
+    expires: Date.now() + SESSION_TTL_MS
+  };
+
+  await datastore.set(`session:${sessionToken}`, newSession);
+
+  console.log("Authentication successful, new session created for user:", { userId });
+  return sessionToken;
+}
 
 async function verifySession(actorId, sessionToken) {
   const session = await datastore.get(`session:${sessionToken}`);

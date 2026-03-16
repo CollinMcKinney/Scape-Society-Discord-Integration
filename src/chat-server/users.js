@@ -77,6 +77,17 @@ async function getUser(actorId, actorSessionToken, targetId) {
   return datastore.get(`user:${targetId}`);
 }
 
+function parseRole(role) {
+  if (typeof role === "number") return role;
+
+  if (typeof role === "string") {
+    const upper = role.toUpperCase();
+    if (Roles[upper] !== undefined) return Roles[upper];
+  }
+
+  return null; // invalid role
+}
+
 async function setRole(actorId, actorSessionToken, targetId, newRole) {
   const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
@@ -89,7 +100,7 @@ async function setRole(actorId, actorSessionToken, targetId, newRole) {
   if (actor.role <= target.role) return false;
   if (actor.role <= newRole) return false;
 
-  target.role = newRole;
+  target.role = parseRole(newRole);
   await datastore.set(`user:${targetId}`, target);
   return true;
 }
