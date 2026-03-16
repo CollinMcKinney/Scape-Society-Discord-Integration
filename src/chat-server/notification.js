@@ -1,7 +1,7 @@
 // notification.js
 const crypto = require("crypto");
 const datastore = require("./datastore");
-const { AuthService } = require("./auth");
+const auth = require("./auth");
 
 const NotificationType = Object.freeze({
   ACHIEVEMENT: "achievement",
@@ -10,7 +10,7 @@ const NotificationType = Object.freeze({
 });
 
 async function addNotification(actorId, actorSessionToken, notification) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
 
   const id = notification.id || crypto.randomUUID();
@@ -29,7 +29,10 @@ async function addNotification(actorId, actorSessionToken, notification) {
   return true;
 }
 
-async function getNotifications(userId, limit = 50) {
+async function getNotifications(actorId, actorSessionToken, limit = 50) {
+  const verified = await auth.verifySession(actorId, actorSessionToken);
+  if (!verified) return [];
+
   const ids = await datastore.zRange("notifications", -limit, -1);
   const notifications = [];
 
@@ -45,8 +48,33 @@ async function getNotifications(userId, limit = 50) {
   return notifications;
 }
 
+async function deleteNotification(actorId, actorSessionToken, notificationId) {
+  const verified = await auth.verifySession(actorId, actorSessionToken);
+  if (!verified) return false;
+
+  await datastore.del(`notification:${notificationId}`);
+  await datastore.zRem("notifications", notificationId);
+
+  return true;
+}
+
+async function editNotification(actorId, actorSessionToken, notificationId, updatedFields) {
+  const verified = await auth.verifySession(actorId, actorSessionToken);
+  if (!verified) return false;
+
+  const notification = await datastore.get(`notification:${notificationId}`);
+  if (!notification) return false;
+
+  Object.assign(notification, updatedFields);
+  await datastore.set(`notification:${notificationId}`, notification);
+
+  return true;
+}
+
 module.exports = { 
     NotificationType,
     addNotification, 
-    getNotifications
+    getNotifications,
+    deleteNotification,
+    editNotification
 };

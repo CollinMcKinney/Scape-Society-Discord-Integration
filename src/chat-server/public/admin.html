@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scape Society Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+/* ---------------- Base ---------------- */
+body {
+  margin:0; padding:0;
+  background-color:#121212;
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color:#BADA55;
+  text-align:center;
+  overflow-x:hidden;
+  position: relative;
+}
+
+/* ---------------- Brazier Containers ---------------- */
+.brazier-container {
+  position: fixed;
+  top: 100px;
+  width: 220px;
+  height: 400px;
+  z-index: 0;
+}
+#flameLeftContainer { left: 50px; }
+#flameRightContainer { right: 50px; }
+.flameCanvas { width: 100%; height: 100%; display: block; }
+
+/* ---------------- Header Panel ---------------- */
+header {
+  position: relative;
+  background: rgba(20,20,20,0.9);
+  margin: 20px auto;
+  padding: 20px;
+  max-width: 900px;
+  border-radius: 10px;
+  box-shadow: 0 0 40px rgba(0,255,128,0.2), 0 0 80px rgba(0,255,128,0.1);
+  z-index:1;
+}
+header h1 {
+  font-size: 3em;
+  font-family: 'Fredoka One', cursive;
+  color:#BADA55;
+  text-shadow:0 0 5px rgba(0,255,255,0.3);
+  margin:0;
+}
+
+/* ---------------- Container ---------------- */
+.container {
+  position: relative;
+  z-index: 1;
+  max-width:900px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+  padding-top:30px;
+}
+
+/* ---------------- Login Panel ---------------- */
+.login-card {
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:20px;
+  background-color: rgba(30,30,30,0.9);
+  padding:20px 30px;
+  border-radius:10px;
+  box-shadow:0 0 40px rgba(0,255,128,0.15),0 0 80px rgba(0,255,128,0.1);
+}
+.login-card label { font-weight:bold; flex:1 1 200px; text-align:center; }
+.login-card input { padding:8px; border-radius:5px; border:1px solid #555; background-color:#121212; color:#BADA55; width:220px; text-align:center; }
+
+/* ---------------- Command Panel ---------------- */
+.command-panel {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background-color: rgba(30,30,30,0.9);
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 40px rgba(0,255,128,0.15),0 0 80px rgba(0,255,128,0.1);
+}
+.command-panel select, .command-panel input[type=text] {
+  padding:10px; border-radius:5px; border:1px solid #555; background-color:#121212; color:#BADA55; text-align:center; flex:1;
+}
+.command-panel button {
+  cursor:pointer; font-weight:bold; transition: background 0.2s, color 0.2s, transform 0.1s;
+  background-color:#555555; padding:10px 20px; border-radius:5px;
+}
+.command-panel button:hover { background-color:#00FF00; color:#121212; }
+.command-panel button:active { background-color:#BADA55; color:#121212; transform: scale(0.95); }
+
+/* ---------------- Result Box ---------------- */
+.result-box {
+  width:100%; max-width:900px; min-height:400px; padding:15px;
+  border-radius:10px; border:1px solid #555;
+  color:#BADA55; overflow-y:auto; white-space: pre-wrap; font-family:monospace; text-align:left;
+  background-color: rgba(30,30,30,0.85);
+  box-shadow:0 0 20px rgba(0,255,128,0.15);
+}
+</style>
+</head>
+<body>
+
+<!-- ================= Brazier Canvases ================= -->
+<div id="flameLeftContainer" class="brazier-container">
+  <canvas id="flameLeft" class="flameCanvas"></canvas>
+</div>
+
+<div id="flameRightContainer" class="brazier-container">
+  <canvas id="flameRight" class="flameCanvas"></canvas>
+</div>
+
+<!-- ================= Header ================= -->
+<header>
+  <h1>Scape Society Dashboard</h1>
+</header>
+
+<!-- ================= Panels ================= -->
+<div class="container">
+
+  <!-- Login -->
+  <div class="login-card">
+    <label>UserID: <input type="text" id="userID" placeholder="Enter your UserID"></label>
+    <label>SessionToken: <input type="text" id="sessionToken" placeholder="Enter your SessionToken"></label>
+  </div>
+
+  <!-- Command Panel -->
+  <div class="command-panel">
+    <select id="commandSelect"></select>
+    <input type="text" id="argumentsInput" placeholder='Arguments (comma-separated, JSON supported)'>
+    <button id="callButton">Run Command</button>
+  </div>
+
+  <!-- Result Box -->
+  <div class="result-box" id="resultBox">Result will appear here...</div>
+
+</div>
+
+<script>
+// ================= Admin Functions =====================
+const adminFunctions = [
+    {name:"authenticate", description:"Authenticate a user"},
+    {name:"verifySession", description:"Verify a session token"},
+    {name:"saveState", description:"Save application state"},
+    {name:"loadState", description:"Load application state"},
+    {name:"addMessage", description:"Add a message"},
+    {name:"getMessages", description:"Get all messages"},
+    {name:"deleteMessage", description:"Delete a message"},
+    {name:"editMessage", description:"Edit a message"},
+    {name:"addNotification", description:"Add a notification"},
+    {name:"getNotifications", description:"Get all notifications"},
+    {name:"deleteNotification", description:"Delete a notification"},
+    {name:"editNotification", description:"Edit a notification"},
+    {name:"createUser", description:"Create a user"},
+    {name:"listUsers", description:"List all users"},
+    {name:"getUser", description:"Get a specific user"},
+    {name:"setRole", description:"Set a user role"}
+];
+
+// Populate dropdown dynamically
+const commandSelect = document.getElementById("commandSelect");
+adminFunctions.forEach(func=>{
+    const opt = document.createElement("option");
+    opt.value = func.name;
+    opt.textContent = `${func.name} — ${func.description}`;
+    commandSelect.appendChild(opt);
+});
+
+// ================== Command Execution =====================
+const callButton = document.getElementById("callButton");
+const argsInput = document.getElementById("argumentsInput");
+const resultBox = document.getElementById("resultBox");
+const userIDField = document.getElementById("userID");
+const sessionTokenField = document.getElementById("sessionToken");
+
+callButton.addEventListener("click", async ()=>{
+    const functionName = commandSelect.value;
+    if(!functionName){ alert("Select a command first!"); return; }
+
+    const userID = userIDField.value.trim();
+    const sessionToken = sessionTokenField.value.trim();
+    if(!userID||!sessionToken){ alert("Enter your UserID and SessionToken!"); return; }
+
+    let args = argsInput.value.trim();
+    args = args ? args.split(",").map(a=>{
+        a=a.trim();
+        if(!a) return a;
+        try { return JSON.parse(a); } catch { return a; }
+    }) : [];
+
+    args.unshift(sessionToken);
+    args.unshift(userID);
+
+    try{
+        const response = await fetch("/admin/call",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({functionName,args})
+        });
+        const data = await response.json();
+        resultBox.textContent = JSON.stringify(data,null,2);
+    } catch(err){
+        resultBox.textContent = "Error: "+err.message;
+    }
+});
+
+// ================== Brazier & Green Flames =====================
+function initRSBrazier(canvas){
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const particles = [], smoke = [];
+
+    function drawBrazier(){
+        const cx = canvas.width/2;
+        const cy = canvas.height-50;
+
+        // Base
+        ctx.fillStyle="#222"; ctx.fillRect(cx-60, cy+50, 120, 20);
+
+        // Legs
+        const legW=6, legH=150, spacing=10;
+        ctx.fillStyle="#444";
+        ctx.fillRect(cx-spacing*1, cy-legH+20, legW, legH);
+        ctx.fillRect(cx-spacing*0, cy-legH+20, legW, legH);
+        ctx.fillRect(cx+spacing*1, cy-legH+20, legW, legH);
+
+        // Pot
+        const potY = cy-legH;
+        ctx.beginPath();
+        ctx.moveTo(cx-40,potY);
+        ctx.quadraticCurveTo(cx,potY-50,cx+40,potY);
+        ctx.closePath();
+        ctx.fillStyle="#333"; ctx.fill();
+        ctx.strokeStyle="#555"; ctx.stroke();
+
+        // Green glow inside pot
+        const grad = ctx.createRadialGradient(cx,potY-25,5,cx,potY-25,35);
+        grad.addColorStop(0,'rgba(0,255,0,0.7)');
+        grad.addColorStop(0.5,'rgba(0,200,0,0.4)');
+        grad.addColorStop(1,'rgba(0,100,0,0.1)');
+        ctx.fillStyle=grad;
+        ctx.fill();
+    }
+
+    function createParticle(){
+        const cx = canvas.width/2;
+        const cy = canvas.height-50 - 150;
+        const x = cx + (Math.random()*30-15);
+        const y = cy;
+        const size = Math.random()*8+4;
+        const speed = Math.random()*1 + 0.5;
+        const colorArr = [
+            `rgba(0,255,0,0.6)`,
+            `rgba(0,200,0,0.4)`,
+            `rgba(0,150,0,0.3)`
+        ];
+        const color = colorArr[Math.floor(Math.random()*colorArr.length)];
+        particles.push({x,y,size,speed,color,angle:Math.random()*Math.PI*2});
+    }
+
+    function createSmoke(){
+        const cx = canvas.width/2;
+        const cy = canvas.height-50 - 150;
+        const x = cx + (Math.random()*20-10);
+        const y = cy;
+        const size = Math.random()*15+10;
+        smoke.push({x,y,size,alpha:0.1+Math.random()*0.2});
+    }
+
+    function update(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        drawBrazier();
+
+        // Particles
+        for(let i=particles.length-1;i>=0;i--){
+            const p = particles[i];
+            p.y -= p.speed;
+            p.x += Math.sin(p.angle)*0.5;
+            p.size *= 0.97;
+            p.angle += 0.05;
+            ctx.beginPath();
+            ctx.fillStyle = p.color;
+            ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+            ctx.fill();
+            if(p.size<1 || p.y<0) particles.splice(i,1);
+        }
+        if(particles.length<80) createParticle();
+
+        // Smoke
+        for(let i=smoke.length-1;i>=0;i--){
+            const s = smoke[i];
+            s.y -= 0.3;
+            s.alpha *= 0.99;
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(200,200,200,${s.alpha})`;
+            ctx.arc(s.x,s.y,s.size,0,Math.PI*2);
+            ctx.fill();
+            if(s.alpha<0.01) smoke.splice(i,1);
+        }
+        if(smoke.length<30) createSmoke();
+
+        requestAnimationFrame(update);
+    }
+    update();
+}
+
+initRSBrazier(document.getElementById('flameLeft'));
+initRSBrazier(document.getElementById('flameRight'));
+</script>
+
+</body>
+</html>

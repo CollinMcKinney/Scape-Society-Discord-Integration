@@ -1,7 +1,7 @@
 // user.js
 const crypto = require("crypto");
 const datastore = require("./datastore");
-const { AuthService } = require("./auth");
+const auth = require("./auth");
 
 const Roles = Object.freeze({
   BLOCKED: 0,
@@ -28,7 +28,6 @@ async function createUserInternal({ osrs_name, disc_name, forum_name, role = Rol
   }
 
   const id = crypto.randomUUID();
-
   
   const hashedPass = hashToken(password);
 
@@ -49,7 +48,7 @@ async function createUserInternal({ osrs_name, disc_name, forum_name, role = Rol
 
 // Public API
 async function createUser(actorId, actorSessionToken, newUserData) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) throw new Error("Actor not authenticated");
 
   const actor = await datastore.get(`user:${actorId}`);
@@ -59,7 +58,7 @@ async function createUser(actorId, actorSessionToken, newUserData) {
 }
 
 async function listUsers(actorId, actorSessionToken) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) throw new Error("Actor not authenticated");
 
   const actor = await datastore.get(`user:${actorId}`);
@@ -82,12 +81,12 @@ async function listUsers(actorId, actorSessionToken) {
 }
 
 async function getUser(actorId, actorSessionToken, targetId) {
-  await AuthService.verifySession(actorId, actorSessionToken);
+  await auth.verifySession(actorId, actorSessionToken);
   return datastore.get(`user:${targetId}`);
 }
 
 async function setRole(actorId, actorSessionToken, targetId, newRole) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
 
   const actor = await datastore.get(`user:${actorId}`);
@@ -109,7 +108,7 @@ async function setRole(actorId, actorSessionToken, targetId, newRole) {
 // and that should be done through setRole for better validation. 
 // Maybe we can remove this and just use setRole for all updates?
 async function updateUser(actorId, actorSessionToken, targetUser) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) throw new Error("Actor not authenticated");
 
   const actor = await datastore.get(`user:${actorId}`);
@@ -120,11 +119,13 @@ async function updateUser(actorId, actorSessionToken, targetUser) {
 
 module.exports = { 
     Roles, 
+
     createUser, 
-    getUser, 
-    updateUser, 
     listUsers, 
+    getUser, 
     setRole,
+    updateUser, 
+
     createUserInternal,
     hashToken
 };

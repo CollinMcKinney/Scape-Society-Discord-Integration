@@ -1,6 +1,6 @@
 // messages.js
 const datastore = require("./datastore");
-const { AuthService } = require("./auth");
+const auth = require("./auth");
 const { v4: uuidv4 } = require("uuid");
 
 // Define roles enum locally or import from user.js
@@ -73,7 +73,7 @@ async function createMessage(actorId, content) {
 }
 
 async function addMessage(actorId, actorSessionToken, message) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
 
   const actor = await datastore.get(`user:${actorId}`);
@@ -82,12 +82,12 @@ async function addMessage(actorId, actorSessionToken, message) {
   const existing = await datastore.exists(`message:${message.id}`);
   if (existing) return false;
 
-  await message.save();
+  await createMessage(actorId, message.content).save();
   return true;
 }
 
 async function getMessages(actorId, actorSessionToken, limit = 50) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return [];
 
   const ids = await datastore.zRange("messages", -limit, -1);
@@ -101,7 +101,7 @@ async function getMessages(actorId, actorSessionToken, limit = 50) {
 
 // Moderation
 async function deleteMessage(actorId, actorSessionToken, messageId) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
 
   const message = await Message.load(messageId);
@@ -116,7 +116,7 @@ async function deleteMessage(actorId, actorSessionToken, messageId) {
 }
 
 async function editMessage(actorId, actorSessionToken, messageId, newContent) {
-  const verified = await AuthService.verifySession(actorId, actorSessionToken);
+  const verified = await auth.verifySession(actorId, actorSessionToken);
   if (!verified) return false;
 
   const message = await Message.load(messageId);
