@@ -5,7 +5,7 @@ node_modules/
 *.env*
 
 # VSCode settings
-!tasks.json
+tasks.json
 *.code-workspace
 
 # Logs
