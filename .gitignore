@@ -2,11 +2,11 @@
 node_modules/
 
 # Environment variables
-*.env*
+!*.env*
 
 # VSCode settings
-tasks.json
-*.code-workspace
+!tasks.json
+!*.code-workspace
 
 # Logs
 *.log
