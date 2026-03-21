@@ -4,6 +4,7 @@ dist/
 
 # Environment variables
 *.env*
+!.env.example
 
 # VSCode settings
 tasks.json
@@ -13,7 +14,7 @@ tasks.json
 *.log
 
 # backups
-/data/redis_backup.json
+/data/backup.json
 
 # yarn
 yarn.lock
