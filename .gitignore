@@ -1,10 +1,19 @@
 # Node dependencies
 node_modules/
+
+# TypeScript
+*.tsbuildinfo
 dist/
+
+# yarn
+yarn.lock
 
 # Environment variables
 *.env*
 !.env.example
+
+# backups
+/data/backup.json
 
 # VSCode settings
 tasks.json
@@ -12,12 +21,3 @@ tasks.json
 
 # Logs
 *.log
-
-# backups
-/data/backup.json
-
-# yarn
-yarn.lock
-
-# TypeScript
-*.tsbuildinfo
