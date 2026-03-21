@@ -46,7 +46,8 @@ type BackupEntry =
 const redisHost = process.env.REDIS_HOST;
 const redisPort = process.env.REDIS_PORT;
 const BACKUP_DIR = path.join(__dirname, "../data");
-const BACKUP_FILE = path.join(BACKUP_DIR, "redis_backup.json");
+const BACKUP_FILE = path.join(BACKUP_DIR, "backup.json");
+const BACKUP_FILE_EXAMPLE = path.join(BACKUP_DIR, "backup.json.example");
 
 // Auto-save configuration
 const MIN_INTERVAL_MS = 5000; // 5 seconds minimum
@@ -226,13 +227,18 @@ async function saveState(): Promise<{ success: boolean; path?: string; error?: s
  * @returns A result object describing whether restore succeeded and, when relevant, why it failed.
  */
 async function loadState(): Promise<{ success: boolean; error?: string }> {
+  let backupFile = BACKUP_FILE;
   try {
     if (!fs.existsSync(BACKUP_FILE)) {
-      console.warn(`Backup file not found: ${BACKUP_FILE}`);
-      return { success: false, error: "Backup file not found" };
+      if(fs.existsSync(BACKUP_FILE_EXAMPLE)) {
+        backupFile = BACKUP_FILE_EXAMPLE;
+      } else {
+        console.warn(`Backup file not found: ${BACKUP_FILE} OR ${BACKUP_FILE_EXAMPLE}`);
+        return { success: false, error: "Backup file not found" };
+      }
     }
 
-    const rawData = fs.readFileSync(BACKUP_FILE);
+    const rawData = fs.readFileSync(backupFile);
     const backupData: BackupData = JSON.parse(rawData.toString());
 
     await client.flushDb();
@@ -261,7 +267,7 @@ async function loadState(): Promise<{ success: boolean; error?: string }> {
       }
     }
 
-    console.log(`Redis state loaded from ${BACKUP_FILE}`);
+    console.log(`Redis state loaded from ${backupFile}`);
     return { success: true };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

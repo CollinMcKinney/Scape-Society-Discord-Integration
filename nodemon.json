@@ -1,7 +1,7 @@
 {
   "watch": ["."],
   "ext": "ts",
-  "ignore": ["node_modules", "data/redis_backup.json"],
+  "ignore": ["node_modules"],
   "exec": "ts-node",
   "legacyWatch": true
 }
