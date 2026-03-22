@@ -609,7 +609,7 @@ async function invokeAdminCommand(functionName: AdminApiFunctionName, args: unkn
 
 router.get("/", (req: Request, res: Response) => {
   user.printRootCredentials();
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 router.post("/call", async (req: Request, res: Response) => {

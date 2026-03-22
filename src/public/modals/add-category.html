@@ -1,0 +1,20 @@
+<!-- Add Category Modal -->
+<div class="modal-overlay" id="addCategoryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">📁 Add Folder</h3>
+      <button class="modal-close" onclick="closeAddCategoryModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="addCategoryName">Folder Name</label>
+        <input type="text" id="addCategoryName" placeholder="e.g., events, clanWars, raids" spellcheck="false" autocomplete="off">
+        <div class="field-help">Lowercase letters, numbers, dashes, and underscores only</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" onclick="closeAddCategoryModal()" title="Close without creating">Cancel</button>
+      <button type="button" class="primary-button" onclick="addCategory()" title="Create the new folder">Create Folder</button>
+    </div>
+  </div>
+</div>

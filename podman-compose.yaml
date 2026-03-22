@@ -2,6 +2,7 @@ services:
   redis:
     image: docker.io/library/redis:8.6.1-trixie
     container_name: redis
+    command: redis-server --port ${REDIS_PORT} # Needed if REDIS_PORT is changed from 6379 in .env
     ports: # Bind Redis to localhost only so it's accessible from the host machine
       # for debugging, but not exposed to the public network. Both host and 
       # container use the same port number (from .env). Other containers
@@ -21,14 +22,17 @@ services:
     ports:
       - ${API_PORT}:${API_PORT}
     volumes:
-      - node_modules:/app/node_modules   # container-only dependencies
+      # Container only
+      - node_modules:/app/node_modules # This one is also shared for development (TypeScript static checker needs them)
+      # - dist:/app/dist # TODO: build fails if this is container only; maybe needs to be added to `volumes:`
+      # Share with host for live Nodemon updates
       - ./.env:/app/.env:Z
       - ./nodemon.json:/app/nodemon.json:Z
       - ./package.json:/app/package.json:Z
-      - ./runtime.js:/app/runtime.js:Z       # host file mounted inside container
+      - ./runtime.js:/app/runtime.js:Z
       - ./tsconfig.json:/app/tsconfig.json:Z
-      - ./src:/app/src:Z                 # host code for live updates
-      - ./data:/app/data:Z               # optional data folder
+      - ./src:/app/src:Z
+      - ./data:/app/data:Z
     restart: unless-stopped
     
 volumes:

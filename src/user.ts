@@ -484,6 +484,12 @@ async function createUser(
  */
 async function listUsers(actorSessionToken: string): Promise<User[]> {
   const actor = await auth.getVerifiedActor(actorSessionToken);
+  
+  // Check if actor has required role (MODERATOR+)
+  if (actor.role < Roles.MODERATOR) {
+    throw new Error("Insufficient role - MODERATOR+ required");
+  }
+  
   const isRoot = actor.role === Roles.ROOT;
   
   const ids = await cache.sMembers("users");
@@ -523,16 +529,22 @@ async function getUser(
   targetId: string
 ): Promise<User | null> {
   const actor = await auth.getVerifiedActor(actorSessionToken);
+  
+  // Check if actor has required role (MODERATOR+)
+  if (actor.role < Roles.MODERATOR) {
+    throw new Error("Insufficient role - MODERATOR+ required");
+  }
+  
   const data = await loadStoredUser(targetId);
   if (!data) return null;
-  
+
   const isRoot = actor.role === Roles.ROOT;
-  
+
   // Strip sensitive data for non-ROOT users
   if (!isRoot) {
     delete (data as any).hashedPass;
   }
-  
+
   return new User(data);
 }
 

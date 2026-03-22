@@ -1,0 +1,16 @@
+<!-- Preview File Modal -->
+<div class="modal-overlay" id="previewFileModal">
+  <div class="modal" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3 class="modal-title">📁 File Preview</h3>
+      <button class="modal-close" onclick="closePreviewFileModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body" style="text-align: center;">
+      <img id="previewFileImg" src="" alt="Preview" style="max-width: 100%; max-height: 400px; border-radius: 8px; object-fit: contain;">
+      <div id="previewFileInfo" style="margin-top: 12px; color: var(--muted); font-size: 0.85rem;"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" onclick="closePreviewFileModal()" title="Close">Close</button>
+    </div>
+  </div>
+</div>

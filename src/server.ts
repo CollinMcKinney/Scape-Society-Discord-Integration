@@ -3,6 +3,7 @@ dotenv.config();
 
 import express, { Express } from "express";
 import bodyParser from "body-parser";
+import path from "path";
 import http from "http";
 import { initStorage, saveState, loadState, startAutoSaveDynamic } from "./cache";
 import { initializeRoot } from "./user";
@@ -18,9 +19,13 @@ const app: Express = express();
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
+// Serve static files from public folder (but not index.html - that's handled by /admin route)
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
+
 // Example admin route to broadcast a message to all RuneLite clients
 app.use("/admin", adminRouter);
 app.use("/files", filesRouter);
+app.use("/modals", express.static(path.join(__dirname, "public", "modals")));
 
 // Optional: simple broadcast endpoint for testing
 app.post("/broadcast", (req, res) => {

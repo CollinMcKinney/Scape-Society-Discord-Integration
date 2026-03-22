@@ -22,4 +22,6 @@ tasks.json
 # Logs
 *.log
 
-*TODO.md
+# Keep TODO files local-only; public TODO's should be
+# posted as Issues on the github instead.
+*TODO*

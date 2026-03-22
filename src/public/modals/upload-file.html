@@ -1,0 +1,33 @@
+<!-- Upload File Modal -->
+<div class="modal-overlay" id="uploadFileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">📁 Upload File</h3>
+      <button class="modal-close" onclick="closeUploadFileModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="uploadFileCategory">Category</label>
+        <select id="uploadFileCategory">
+          <option value="clan_icons">Clan Icons (Ranks)</option>
+          <option value="chat_badges">Chat Badges</option>
+          <option value="branding">Clan Branding (Icons & Banners)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="uploadFileFile">File</label>
+        <input type="file" id="uploadFileFile" accept="image/*">
+        <div class="field-help">PNG, JPG, GIF, WebP, or SVG</div>
+      </div>
+      <div class="field">
+        <label for="uploadFileName">File Name (optional)</label>
+        <input type="text" id="uploadFileName" placeholder="Leave blank to use original filename" spellcheck="false" autocomplete="off">
+        <div class="field-help">If not provided, the original filename will be used</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" onclick="closeUploadFileModal()" title="Close without uploading">Cancel</button>
+      <button type="button" class="primary-button" onclick="uploadFile()" title="Upload the file">Upload File</button>
+    </div>
+  </div>
+</div>

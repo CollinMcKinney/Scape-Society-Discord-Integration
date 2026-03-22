@@ -1,0 +1,21 @@
+:root {
+  /* Background colors */
+  --bg: #0d1511;
+  --bg-soft: rgba(14, 27, 21, 0.92);
+  --panel: rgba(22, 38, 30, 0.92);
+  --panel-strong: rgba(26, 47, 37, 0.98);
+  
+  /* Border colors */
+  --line: rgba(153, 255, 194, 0.16);
+  --line-strong: rgba(153, 255, 194, 0.34);
+  
+  /* Text colors */
+  --text: #eef7f1;
+  --muted: #9ab8a7;
+  --accent: #8df0b5;
+  --accent-strong: #c8ff7f;
+  --danger: #ff8585;
+  
+  /* Shadows */
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}

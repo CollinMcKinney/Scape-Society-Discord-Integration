@@ -1,0 +1,45 @@
+<!-- Packet Modal -->
+<div class="modal-overlay" id="packetModal">
+  <div class="modal" style="max-width: 700px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="packetModalTitle">📦 Add Packet</h3>
+      <button class="modal-close" onclick="closePacketModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="packetModalId">
+      <div class="field">
+        <label for="packetType">Packet Type</label>
+        <select id="packetType">
+          <option value="chat.message">chat.message</option>
+          <option value="auth.profileSync">auth.profileSync</option>
+          <option value="auth.resume">auth.resume</option>
+          <option value="auth.guestIssued">auth.guestIssued</option>
+          <option value="config.suppressedPrefixes">config.suppressedPrefixes</option>
+          <option value="config.discordInviteUrl">config.discordInviteUrl</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="packetOrigin">Origin</label>
+        <input type="text" id="packetOrigin" placeholder="e.g., admin, discord, runelite" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="packetBody">Message Body</label>
+        <textarea id="packetBody" placeholder="Enter message content..."></textarea>
+      </div>
+      <div class="field">
+        <label for="packetMeta">Metadata (JSON)</label>
+        <textarea id="packetMeta" placeholder='{"key": "value"}'></textarea>
+        <div class="field-help">Optional additional metadata as JSON</div>
+      </div>
+      <div class="field">
+        <label for="packetAttachments">Attachments (JSON array)</label>
+        <textarea id="packetAttachments" placeholder='[{"url": "https://...", "type": "image"}]'></textarea>
+        <div class="field-help">Optional attachments as JSON array</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" onclick="closePacketModal()" title="Close without saving">Cancel</button>
+      <button type="button" class="primary-button" onclick="savePacket()" title="Save the packet">Save Packet</button>
+    </div>
+  </div>
+</div>

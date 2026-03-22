@@ -1,0 +1,16 @@
+<!-- View JSON Modal -->
+<div class="modal-overlay" id="viewJsonModal">
+  <div class="modal" style="max-width: 700px;">
+    <div class="modal-header">
+      <h3 class="modal-title">📄 View JSON</h3>
+      <button class="modal-close" onclick="closeViewJsonModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <pre id="viewJsonContent" style="background: rgba(7, 15, 11, 0.86); padding: 12px; border-radius: 8px; overflow-x: auto; max-height: 400px; overflow-y: auto; font-size: 0.8rem; color: var(--text);"></pre>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" onclick="copyViewJson()" title="Copy JSON to clipboard">📋 Copy</button>
+      <button type="button" class="secondary-button" onclick="closeViewJsonModal()" title="Close">Close</button>
+    </div>
+  </div>
+</div>

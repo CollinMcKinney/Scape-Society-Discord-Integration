@@ -1,0 +1,20 @@
+<!-- Add Prefix Modal -->
+<div class="modal-overlay" id="addPrefixModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🚫 Add Suppressed String</h3>
+      <button class="modal-close" onclick="closeAddPrefixModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="addPrefixValue">String to Suppress</label>
+        <input type="text" id="addPrefixValue" placeholder="Enter text to block (e.g., [Clan Chat])" spellcheck="false" autocomplete="off">
+        <div class="field-help">Messages containing this string will not be bridged to RuneLite clients.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" onclick="closeAddPrefixModal()" title="Close without adding">Cancel</button>
+      <button type="button" class="primary-button" onclick="addPrefix()" title="Add the suppressed string">Add String</button>
+    </div>
+  </div>
+</div>

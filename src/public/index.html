@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concord Admin</title>
+<link rel="icon" type="image/png" href="/files/branding/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/variables.css">
+<link rel="stylesheet" href="/css/global.css">
+<link rel="stylesheet" href="/css/layout.css">
+<link rel="stylesheet" href="/css/modals.css">
+</head>
+<body>
+
+<div id="flameLeftContainer" class="brazier-container">
+  <canvas id="flameLeft" class="flameCanvas"></canvas>
+</div>
+<div id="flameRightContainer" class="brazier-container">
+  <canvas id="flameRight" class="flameCanvas"></canvas>
+</div>
+
+<main class="shell">
+  <section class="hero">
+    <div class="hero-top">
+      <h1 class="hero-title">Concord Admin</h1>
+      <button type="button" class="status-pill" id="loginButton" title="Click to log in or out" style="cursor: pointer; border: 1px solid var(--line-strong); background: rgba(141, 240, 181, 0.08);">
+        <span class="status-dot"></span>
+        <span id="sessionSummary">Not logged in</span>
+        <span style="margin-left: 8px; opacity: 0.6;">🔑</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="nav-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Navigation</h2>
+      </div>
+      <nav class="nav-section">
+        <div class="nav-section-title">Cache</div>
+        <button class="nav-item active" data-view="packets" data-tooltip="View and manage all packets in the cache">
+          <span class="nav-item-icon">📦</span>
+          <span class="nav-item-label">Packets</span>
+        </button>
+        <button class="nav-item" data-view="users" data-tooltip="View and manage all users in the cache">
+          <span class="nav-item-icon">👤</span>
+          <span class="nav-item-label">Users</span>
+        </button>
+        <button class="nav-item" data-view="files" data-tooltip="View and manage clan icons, chat badges, and other files">
+          <span class="nav-item-icon">📁</span>
+          <span class="nav-item-label">Files</span>
+        </button>
+      </nav>
+      <nav class="nav-section">
+        <div class="nav-section-title">Configuration</div>
+        <button class="nav-item" data-view="prefixes" data-tooltip="Blocks messages containing any configured text">
+          <span class="nav-item-icon">🚫</span>
+          <span class="nav-item-label">Message Suppression</span>
+        </button>
+        <button class="nav-item" data-view="commandRoles" data-tooltip="View and edit command permission requirements">
+          <span class="nav-item-icon">⚙️</span>
+          <span class="nav-item-label">Permissions</span>
+        </button>
+      </nav>
+      <nav class="nav-section">
+        <div class="nav-section-title">System</div>
+        <button class="nav-item" data-view="system" data-tooltip="Save/load cache and edit environment variables">
+          <span class="nav-item-icon">🔧</span>
+          <span class="nav-item-label">System</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Breadcrumb -->
+      <div class="breadcrumb" id="breadcrumb">
+        <span class="breadcrumb-item active">Home</span>
+      </div>
+
+      <!-- Dynamic Content Panel -->
+      <div class="content-panel" id="contentPanel">
+        <!-- Content injected by JavaScript -->
+      </div>
+    </main>
+  </div>
+</main>
+
+<!-- Include all modals -->
+<div id="modalsContainer"></div>
+
+<!-- Scripts -->
+<script src="/js/core.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/permissions.js"></script>
+<script src="/js/credentials.js"></script>
+<script src="/js/navigation.js"></script>
+<script src="/js/views/packets.js"></script>
+<script src="/js/views/users.js"></script>
+<script src="/js/views/files.js"></script>
+<script src="/js/views/shared.js"></script>
+<script src="/js/modals.js"></script>
+<script src="/js/brazier.js"></script>
+<script src="/js/main.js"></script>
+
+</body>
+</html>

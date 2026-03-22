@@ -1,0 +1,28 @@
+<!-- Set Role Modal -->
+<div class="modal-overlay" id="setRoleModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🎭 Set User Role</h3>
+      <button class="modal-close" onclick="closeSetRoleModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="setRoleUserId">
+      <div class="field">
+        <label for="setRoleSelect">New Role</label>
+        <select id="setRoleSelect">
+          <option value="0">BLOCKED</option>
+          <option value="1">GUEST</option>
+          <option value="2">MEMBER</option>
+          <option value="3">MODERATOR</option>
+          <option value="4">ADMIN</option>
+          <option value="5">OWNER</option>
+          <option value="6">ROOT</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" onclick="closeSetRoleModal()" title="Close without saving">Cancel</button>
+      <button type="button" class="primary-button" onclick="saveRoleChange()" title="Save the new role">Save Role</button>
+    </div>
+  </div>
+</div>
