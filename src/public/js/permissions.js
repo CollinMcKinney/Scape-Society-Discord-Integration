@@ -62,11 +62,11 @@ const ACTION_PERMISSIONS = {
  */
 async function getCurrentUserRole() {
   const sessionToken = sessionStorage.getItem('sessionToken');
-  if (!sessionToken) return ROLES.GUEST;
-  
+  if (!sessionToken) return ROLES.BLOCKED;
+
   try {
     // We need to get user info - for now we'll cache it in state
-    return state.currentUserRole || ROLES.GUEST;
+    return state.currentUserRole ?? ROLES.GUEST;
   } catch (error) {
     return ROLES.GUEST;
   }
@@ -76,7 +76,7 @@ async function getCurrentUserRole() {
  * Check if current user has required role
  */
 function hasPermission(requiredRole) {
-  const currentRole = state.currentUserRole || ROLES.GUEST;
+  const currentRole = state.currentUserRole ?? ROLES.GUEST;
   return currentRole >= requiredRole;
 }
 
@@ -104,7 +104,7 @@ async function loadUserPermissions() {
   const storedRole = sessionStorage.getItem('currentUserRole');
 
   if (!sessionToken) {
-    state.currentUserRole = ROLES.GUEST;
+    state.currentUserRole = ROLES.BLOCKED; // Not logged in = blocked
     updateNavVisibility();
     return;
   }

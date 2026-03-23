@@ -122,11 +122,12 @@ class User {
  */
 function printRootCredentials(): void {
   const sessionToken = process.env.ROOT_SESSION_TOKEN || "";
+  const port = process.env.API_PORT || "8080";
 
   console.log("");
   console.log(`${colors.gray}${"─".repeat(60)}${colors.reset}`);
-  console.log(`${colors.green}ROOT LOGIN CREDENTIALS${colors.reset} ${colors.gray}(paste into Username OR Password field):${colors.reset}`);
-  console.log(`${colors.magenta}${sessionToken}${colors.reset}`);
+  console.log(`${colors.green}ROOT LOGIN PAGE: ${colors.cyan}http://localhost:${port}/admin/root${colors.reset}`);
+  console.log(`${colors.gray}Token: ${colors.magenta}${sessionToken}${colors.reset}`);
   console.log(`${colors.gray}${"─".repeat(60)}${colors.reset}`);
   console.log("");
 }

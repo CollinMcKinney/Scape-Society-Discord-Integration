@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROOT Login - Concord Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      background: #070f0b;
+      color: #e8f5e9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-container {
+      background: rgba(7, 15, 11, 0.95);
+      border: 1px solid rgba(141, 240, 181, 0.2);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 0 40px rgba(141, 240, 181, 0.1);
+    }
+    h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 2rem;
+      color: #8df0b5;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .field { margin-bottom: 20px; }
+    label {
+      display: block;
+      color: #8df0b5;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    input[type="password"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(7, 15, 11, 0.86);
+      color: #e8f5e9;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    input[type="password"]:focus {
+      outline: none;
+      border-color: #8df0b5;
+      box-shadow: 0 0 0 3px rgba(141, 240, 181, 0.1);
+    }
+    input[type="password"]::placeholder { color: #555; }
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: #8df0b5;
+      color: #070f0b;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #a5f5c4;
+      transform: translateY(-1px);
+    }
+    button:active { transform: translateY(0); }
+    .error {
+      background: rgba(255, 133, 133, 0.1);
+      border: 1px solid rgba(255, 133, 133, 0.3);
+      color: #ff8585;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 24px;
+      color: #888;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+    .back-link:hover { color: #8df0b5; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>🔑 ROOT Access</h1>
+    <p class="subtitle">Enter your ROOT session token</p>
+    
+    <div id="error" class="error" style="display: none;"></div>
+    
+    <form id="rootLoginForm">
+      <div class="field">
+        <label for="sessionToken">ROOT Session Token</label>
+        <input 
+          type="password" 
+          id="sessionToken" 
+          name="sessionToken" 
+          placeholder="Paste your ROOT session token here"
+          autocomplete="off"
+          required
+        >
+      </div>
+      
+      <button type="submit">Login as ROOT</button>
+    </form>
+    
+    <a href="/admin/" class="back-link">← Back to regular login</a>
+  </div>
+  
+  <script>
+    // Auto-focus the token field
+    document.getElementById('sessionToken').focus();
+    
+    // Handle form submission
+    document.getElementById('rootLoginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const sessionToken = document.getElementById('sessionToken').value;
+      const errorDiv = document.getElementById('error');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      
+      // Disable button during request
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Authenticating...';
+      
+      try {
+        const response = await fetch('/admin/root', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionToken })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Store token and user info in sessionStorage
+          sessionStorage.setItem('sessionToken', data.sessionToken);
+          sessionStorage.setItem('currentUserRole', '6'); // ROOT role
+          sessionStorage.setItem('currentUsername', data.username || 'ROOT');
+          // Redirect to admin panel
+          window.location.href = data.redirect || '/admin/';
+        } else {
+          // Show error
+          errorDiv.textContent = data.error || 'Login failed';
+          errorDiv.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Login as ROOT';
+        }
+      } catch (err) {
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Login as ROOT';
+      }
+    });
+  </script>
+</body>
+</html>

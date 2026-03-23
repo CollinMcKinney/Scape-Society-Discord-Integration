@@ -3,14 +3,6 @@
  */
 
 async function loadFilesView() {
-  // Check if credentials are set
-  const identifier = document.getElementById('rootCredentials').value.trim();
-  const hasCredential = document.getElementById('rootPassword').value.length > 0 || sessionStorage.getItem('sessionToken');
-  if (!identifier || !hasCredential) {
-    showCredentialsRequiredView('files');
-    return;
-  }
-
   const allFiles = await apiCall('listFiles');
   state.files = allFiles || {};
   state.filesCurrentTab = state.filesCurrentTab || 'all';
@@ -22,8 +14,6 @@ async function loadFilesView() {
   // Put branding first, then sort the rest alphabetically
   const sortedCategories = ['branding', ...state.filesCategories.filter(c => c !== 'branding').sort()];
   state.filesCategories = sortedCategories;
-
-  const contentPanel = document.getElementById('contentPanel');
 
   // Build file counts
   const fileCounts = {};
@@ -356,6 +346,7 @@ async function deleteFile(category, fileName) {
 }
 
 // Make functions globally accessible
+window.loadFilesView = loadFilesView;
 window.openUploadFileModal = openUploadFileModal;
 window.closeUploadFileModal = closeUploadFileModal;
 window.uploadFile = uploadFile;

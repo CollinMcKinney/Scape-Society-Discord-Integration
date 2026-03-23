@@ -103,28 +103,10 @@ async function findUserByIdentifier(identifier: string): Promise<ActorData | nul
 
 /**
  * Validates credentials and returns a reusable session token on success.
- * Supports login with just session token in either field.
- * @param identifier - User ID, OSRS name, Discord name, forum name, OR session token.
- * @param password - Password, hashed password, OR session token.
+ * @param identifier - User ID, OSRS name, Discord name, or forum name.
+ * @param password - Password or hashed password.
  */
 async function authenticate(identifier: string, password: string): Promise<string | null> {
-  // Check if identifier or password is a valid session token
-  // This allows login with just session token in either field
-  const possibleTokens = [identifier, password].filter(Boolean);
-
-  for (const token of possibleTokens) {
-    try {
-      const session = await cache.get<SessionData>(`session:${hashSessionToken(token)}`);
-      if (session && session.expires > Date.now()) {
-        console.log(`${colors.cyan}[auth]${colors.reset} Authenticated via session token:`, { userId: session.userId });
-        // Return the token they provided (valid session)
-        return token;
-      }
-    } catch (err) {
-      // Not a valid session token, continue with normal auth
-    }
-  }
-
   // Normal authentication flow (username + password)
   const user = await findUserByIdentifier(identifier);
 
@@ -135,13 +117,6 @@ async function authenticate(identifier: string, password: string): Promise<strin
   }
 
   const userId = user.id;
-
-  // Allow authentication via session token if the session exists and is valid
-  const existingSession = await cache.get<SessionData>(`session:${hashSessionToken(password)}`);
-  if (existingSession && existingSession.userId === userId && existingSession.expires > Date.now()) {
-    console.log(`${colors.cyan}[auth]${colors.reset} Authenticated via existing session token for user:`, { userId });
-    return password;
-  }
 
   // Verify password using Argon2
   const validPassword = await User.verifyPassword(password, user.hashedPass);

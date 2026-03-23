@@ -630,8 +630,58 @@ async function invokeAdminCommand(functionName: AdminApiFunctionName, args: unkn
 }
 
 router.get("/", (req: Request, res: Response) => {
-  user.printRootCredentials();
   res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// ROOT-only login endpoint
+router.get("/root", (req: Request, res: Response) => {
+  user.printRootCredentials();
+  res.sendFile(path.join(__dirname, "public", "root-login.html"));
+});
+
+router.post("/root", async (req: Request, res: Response) => {
+  try {
+    const { sessionToken } = req.body as { sessionToken?: string };
+    
+    if (!sessionToken) {
+      return res.status(400).json({ error: "Session token required" });
+    }
+    
+    // Verify the session token
+    const userId = await auth.verifySession(sessionToken);
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid or expired session token" });
+    }
+    
+    // Verify this is a ROOT user - load user directly from cache
+    const userData = await cache.get<UserData>(`user:${userId}`);
+    if (!userData || userData.role !== Roles.ROOT) {
+      return res.status(403).json({ error: "ROOT access required" });
+    }
+    
+    // Set session cookie (for backend requests)
+    res.cookie('sessionToken', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    
+    console.log(`${colors.green}[admin]${colors.reset} ROOT login successful`);
+
+    // Return token and user info for frontend to store
+    return res.json({
+      success: true,
+      sessionToken,
+      userId,
+      username: 'ROOT',
+      redirect: '/admin/'
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to login";
+    console.error(`${colors.red}[admin]${colors.reset} ROOT login failed:`, message);
+    return res.status(500).json({ error: message });
+  }
 });
 
 router.post("/call", async (req: Request, res: Response) => {
@@ -670,7 +720,7 @@ router.post("/call", async (req: Request, res: Response) => {
     `${colors.gray}[admin/call]${colors.reset} ` +
     `${colors.blue}${new Date().toISOString()}${colors.reset} ` +
     `${colors.cyan}${userIdentifier}${colors.reset} ` +
-    `${colors.green}'${functionName}'${colors.reset}(${colors.yellow}${argsStr}${colors.reset})`
+    `${colors.green}${functionName}${colors.reset}(${colors.yellow}${argsStr}${colors.reset})`
   );
 
   if (!isAdminApiFunctionName(functionName)) {

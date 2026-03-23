@@ -66,82 +66,48 @@ function openCredentialsModal() {
 
 async function closeCredentialsModal() {
   document.getElementById('credentialsModal').classList.remove('active');
-  
-  // Authenticate with the entered credentials
-  let identifier = document.getElementById('rootCredentials')?.value.trim();
-  let credential = document.getElementById('rootPassword')?.value.trim();
-  
-  // If one field is empty, try using the other as both identifier and credential
-  // This allows pasting just the session token in either field
-  const wasTokenOnly = (!identifier && credential) || (identifier && !credential);
-  
-  if (identifier && !credential) {
-    credential = identifier;
-  } else if (!identifier && credential) {
-    identifier = credential;
+
+  // Get entered credentials - both username AND password required
+  const identifier = document.getElementById('rootCredentials')?.value.trim();
+  const credential = document.getElementById('rootPassword')?.value.trim();
+
+  if (!identifier || !credential) {
+    // Don't attempt login without both fields
+    showToast('Please enter both username and password');
+    return;
   }
-  
-  // If no password entered, try splitting by = (old format: userId=sessionToken)
-  if (credential === '' && identifier && identifier.includes('=')) {
-    const parts = identifier.split('=');
-    if (parts.length === 2) {
-      identifier = parts[0].trim();
-      credential = parts[1].trim();
-      console.log('[closeCredentialsModal] Split credentials:', { identifier: !!identifier, credential: !!credential });
-    }
-  }
-  
-  if (identifier && credential) {
-    console.log('[closeCredentialsModal] Authenticating...', { identifier: !!identifier, credential: !!credential });
+
+  console.log('[closeCredentialsModal] Authenticating...', { identifier: !!identifier, credential: !!credential });
+
+  try {
+    const result = await apiCall('authenticate', [identifier, credential]);
     
-    // If logging in with token only, set temporary placeholder
-    if (wasTokenOnly) {
-      document.getElementById('rootCredentials').value = 'Session User';
+    if (!result) {
+      // Authentication failed
+      showToast('Invalid username or password');
+      // Clear the password field
+      document.getElementById('rootPassword').value = '';
+      return;
     }
     
-    try {
-      const result = await apiCall('authenticate', [identifier, credential]);
-      console.log('[closeCredentialsModal] Auth complete:', result ? 'SUCCESS' : 'FAILED');
-      
-      // Reload user permissions after successful login
-      await permissions.loadUserPermissions();
-      permissions.updateNavVisibility();
-      
-      // If we authenticated with session token only, try to identify the user
-      if (result && document.getElementById('rootCredentials').value === 'Session User') {
-        try {
-          const users = await apiCall('listUsers');
-          // Find ROOT user (most likely who's logging in)
-          const rootUser = users.find(u => u.osrs_name === 'ROOT');
-          if (rootUser) {
-            const username = rootUser.osrs_name || 'ROOT';
-            document.getElementById('rootCredentials').value = username;
-            // Store the actual ROOT role
-            state.currentUserRole = rootUser.role || 6;
-            sessionStorage.setItem('currentUserRole', (rootUser.role || 6).toString());
-            sessionStorage.setItem('currentUsername', username);
-          }
-        } catch (err) {
-          // Keep "Session User" if we can't fetch users
-        }
-      } else if (result) {
-        // Store username for page refresh
-        const username = document.getElementById('rootCredentials').value;
-        if (username && username !== 'Session User') {
-          sessionStorage.setItem('currentUsername', username);
-        }
-      }
-      
-      updateSessionSummary();
-    } catch (err) {
-      console.error('[closeCredentialsModal] Auth error:', err);
-      // Reset if auth failed
-      if (wasTokenOnly) {
-        document.getElementById('rootCredentials').value = '';
-      }
-    }
+    console.log('[closeCredentialsModal] Auth complete: SUCCESS');
+
+    // Reload user permissions after successful login
+    await permissions.loadUserPermissions();
+    permissions.updateNavVisibility();
+
+    // Store username for page refresh
+    sessionStorage.setItem('currentUsername', identifier);
+
+    updateSessionSummary();
+  } catch (err) {
+    console.error('[closeCredentialsModal] Auth error:', err);
+    showToast(`Login failed: ${err.message || 'Invalid credentials'}`);
+    // Clear the password field
+    document.getElementById('rootPassword').value = '';
+    return;
   }
-  
+
   // Load view AFTER authentication completes
   loadCurrentView();
 }
@@ -155,8 +121,10 @@ function clearCredentials() {
   updateSessionSummary();
 }
 
-function logout() {
+async function logout() {
   clearCredentials();
+  // Reload permissions to set role to BLOCKED
+  await permissions.loadUserPermissions();
   // Reload current view to refresh UI
   loadCurrentView();
   showToast('Logged out successfully');

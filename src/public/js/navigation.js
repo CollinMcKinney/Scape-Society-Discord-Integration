@@ -87,46 +87,47 @@ async function loadCurrentView() {
   try {
     switch (state.currentView) {
       case 'auditLogs':
-        await loadPacketsView();
+        await window.loadPacketsView();
         break;
       case 'packet-detail':
-        await loadPacketDetailView();
+        await window.loadPacketDetailView();
         break;
       case 'users':
-        await loadUsersView();
+        await window.loadUsersView();
         break;
       case 'user-detail':
-        await loadUserDetailView();
+        await window.loadUserDetailView();
         break;
       case 'files':
-        await loadFilesView();
+        await window.loadFilesView();
         break;
       case 'prefixes':
-        await loadPrefixesView();
+        await window.loadPrefixesView();
         break;
       case 'commandRoles':
-        await loadCommandRolesView();
+        await window.loadCommandRolesView();
         break;
       case 'system':
-        await loadSystemView();
+        await window.loadSystemView();
         break;
       default:
-        await loadPacketsView();
+        await window.loadPacketsView();
     }
   } catch (error) {
-    // Check if it's a permission error
-    if (error.message && error.message.includes('Insufficient role')) {
+    // Check if it's an authentication/permission error
+    if (error.message && (error.message.includes('Actor not authenticated') || error.message.includes('Insufficient role'))) {
       permissions.showPermissionDeniedView(contentPanel, state.currentView);
-    } else {
-      contentPanel.innerHTML = `
-        <div class="content-panel-body">
-          <div class="empty-state">
-            <div class="empty-state-icon">⚠️</div>
-            <div class="empty-state-title">Error Loading View</div>
-            <div class="empty-state-description">${escapeHtml(error.message)}</div>
-          </div>
-        </div>
-      `;
+      return;
     }
+    // For other errors, show error view
+    contentPanel.innerHTML = `
+      <div class="content-panel-body">
+        <div class="empty-state">
+          <div class="empty-state-icon">⚠️</div>
+          <div class="empty-state-title">Error Loading View</div>
+          <div class="empty-state-description">${escapeHtml(error.message)}</div>
+        </div>
+      </div>
+    `;
   }
 }
