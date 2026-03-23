@@ -64,15 +64,23 @@ const SIZE_THRESHOLD_MB = 50; // Target DB size for scaling interval
 // Ensure backup directory exists
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+};
+
 // =====================
 // Redis Client
 // =====================
-console.log(`Initializing Redis client on ${redisHost}:${redisPort}...`);
 const client: RedisClientType = createClient({
   socket: { host: redisHost as string, port: parseInt(redisPort as string) }
 });
 
-client.on("error", (err: Error) => console.error("Redis Client Error:", err));
+client.on("error", (err: Error) => console.error(`${colors.red}[cache]${colors.reset} Redis Client Error:`, err));
 
 /**
  * Connects the shared Redis client if it has not been opened yet.
@@ -80,7 +88,7 @@ client.on("error", (err: Error) => console.error("Redis Client Error:", err));
 async function initStorage(): Promise<void> {
   if (!client.isOpen) {
     await client.connect();
-    console.log("Redis connected!");
+    console.log(`${colors.green}[cache]${colors.reset} Redis connected!`);
   }
 }
 
@@ -231,7 +239,7 @@ async function saveState(): Promise<{ success: boolean; path?: string; error?: s
           backupData[key] = { type, value: await client.hGetAll(key) };
           break;
         default:
-          console.warn(`Skipping unsupported key type for ${key}: ${type}`);
+          console.warn(`${colors.yellow}[cache]${colors.reset} Skipping unsupported key type for ${key}: ${type}`);
       }
     }
 
@@ -240,7 +248,7 @@ async function saveState(): Promise<{ success: boolean; path?: string; error?: s
     return { success: true, path: BACKUP_FILE };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    console.error("Failed to save Redis state:", err);
+    console.error(`${colors.red}[cache]${colors.reset} Failed to save Redis state:`, err);
     return { success: false, error };
   }
 }
@@ -256,7 +264,7 @@ async function loadState(): Promise<{ success: boolean; error?: string }> {
       if(fs.existsSync(BACKUP_FILE_EXAMPLE)) {
         backupFile = BACKUP_FILE_EXAMPLE;
       } else {
-        console.warn(`Backup file not found: ${BACKUP_FILE} OR ${BACKUP_FILE_EXAMPLE}`);
+        console.warn(`${colors.yellow}[cache]${colors.reset} Backup file not found: ${BACKUP_FILE} OR ${BACKUP_FILE_EXAMPLE}`);
         return { success: false, error: "Backup file not found" };
       }
     }
@@ -290,11 +298,11 @@ async function loadState(): Promise<{ success: boolean; error?: string }> {
       }
     }
 
-    console.log(`Redis state loaded from ${backupFile}`);
+    console.log(`${colors.green}[cache]${colors.reset} Redis state loaded from ${backupFile}`);
     return { success: true };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    console.error("Failed to load Redis state:", err);
+    console.error(`${colors.red}[cache]${colors.reset} Failed to load Redis state:`, err);
     return { success: false, error };
   }
 }
@@ -316,7 +324,7 @@ function getDynamicInterval(): number {
       Math.max(MIN_INTERVAL_MS, (sizeMB / SIZE_THRESHOLD_MB) * MAX_INTERVAL_MS)
     );
   } catch (err) {
-    console.warn("Failed to calculate backup interval, using max.", err);
+    console.warn(`${colors.yellow}[cache]${colors.reset} Failed to calculate backup interval, using max.`, err);
     return MAX_INTERVAL_MS;
   }
 }
@@ -327,7 +335,7 @@ function getDynamicInterval(): number {
  */
 async function startAutoSaveDynamic(): Promise<void> {
   let interval = getDynamicInterval();
-  console.log(`Auto-save enabled. Initial interval: ${Math.round(interval / 1000)}s. Only saves when cache changes.`);
+  console.log(`${colors.green}[cache]${colors.reset} Auto-save enabled. Initial interval: ${colors.cyan}${Math.round(interval / 1000)}s${colors.reset}. Only saves when cache changes.`);
 
   const saveAndSchedule = async (): Promise<void> => {
     try {
@@ -335,7 +343,7 @@ async function startAutoSaveDynamic(): Promise<void> {
         await saveState();
       }
     } catch (err) {
-      console.error("Auto-save failed:", err);
+      console.error(`${colors.red}[cache]${colors.reset} Auto-save failed:`, err);
     }
 
     interval = getDynamicInterval();

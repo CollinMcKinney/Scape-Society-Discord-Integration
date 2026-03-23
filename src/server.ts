@@ -11,8 +11,21 @@ import { attachToServer, broadcast } from "./runelite";
 import adminRouter from "./admin";
 import filesRouter from "./filesRouter";
 import { initFiles } from "./files";
+import { initRateLimiter } from "./rateLimiter";
 import "./discord"; // auto-start Discord integrations
 import { Packet, type SerializedPacket } from "./packet";
+
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+  gray: '\x1b[90m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+};
 
 // --- Express setup ---
 const app: Express = express();
@@ -54,11 +67,13 @@ async function start(): Promise<void> {
   await loadState();
   await initializeRoot();
   await initFiles(); // Load files from disk into cache
+  await initRateLimiter(); // Initialize rate limiter
   startAutoSaveDynamic();
   await saveState();
 
   server.listen(process.env.API_PORT, () => {
-    console.log(`Concord API + RuneLite WS running at http://localhost:${process.env.API_PORT}`);
+    console.log(`${colors.green}[server]${colors.reset} Concord is Running: `
+      + `${colors.magenta}http://localhost:${process.env.API_PORT}${colors.reset}`);
   });
 }
 

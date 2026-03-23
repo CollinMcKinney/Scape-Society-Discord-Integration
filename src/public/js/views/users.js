@@ -117,10 +117,10 @@ async function loadUsersView() {
 
       <!-- Search bar -->
       <div style="margin-bottom: 16px;">
-        <input type="text" id="usersSearchInput" placeholder="Search users..." 
+        <input type="text" id="usersSearchInput" placeholder="Search users..."
           oninput="handleUsersSearch(this);"
           autocomplete="off" name="usersSearch"
-          value=""
+          value="${escapeHtml(state.usersSearchQuery || '')}"
           style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(7, 15, 11, 0.86); color: var(--text); font: inherit; font-size: 0.9rem;">
       </div>
 
@@ -140,7 +140,39 @@ async function loadUsersView() {
 
 function handleUsersSearch(inputElement) {
   state.usersSearchQuery = inputElement.value;
-  loadUsersView();
+  
+  // Filter users by selected role tab
+  let filteredUsers = state.usersCurrentTab === 'all'
+    ? state.users
+    : state.users.filter(u => (u.role != null ? u.role : 2) === parseInt(state.usersCurrentTab));
+  
+  // Filter by search query
+  if (state.usersSearchQuery) {
+    const query = state.usersSearchQuery.toLowerCase();
+    filteredUsers = filteredUsers.filter(u => {
+      const osrs = (u.osrs_name || '').toLowerCase();
+      const disc = (u.disc_name || '').toLowerCase();
+      const forum = (u.forum_name || '').toLowerCase();
+      const id = (u.id || '').toLowerCase();
+      return osrs.includes(query) || disc.includes(query) || forum.includes(query) || id.includes(query);
+    });
+  }
+
+  // Only update the results container, not the entire view
+  const resultsContainer = document.getElementById('usersResults');
+  if (resultsContainer) {
+    if (filteredUsers.length === 0) {
+      resultsContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">👤</div>
+          <div class="empty-state-title">No Users</div>
+          <div class="empty-state-description">${state.usersCurrentTab === 'all' ? 'No users found matching your search.' : 'No users with this role yet.'}</div>
+        </div>
+      `;
+    } else {
+      resultsContainer.innerHTML = filteredUsers.map(user => renderUserCard(user)).join('');
+    }
+  }
 }
 
 function setUsersTab(tab) {
@@ -156,6 +188,7 @@ function renderUserCard(user) {
 
   const canChangeRole = permissions.canPerformAction('changeRole');
   const canDeleteUser = permissions.canPerformAction('deleteUser');
+  const isRoot = permissions.canPerformAction('resetPassword');
 
   return `
     <div class="compact-card" data-user-id="${escapeHtml(user.id)}" data-user-name="${escapeHtml(displayName)}">
@@ -172,6 +205,7 @@ function renderUserCard(user) {
       </div>
       <div class="compact-card-actions">
         ${canChangeRole ? `<button type="button" class="secondary-button" data-action="set-role" title="Change user's role">🎭</button>` : ''}
+        ${isRoot ? `<button type="button" class="secondary-button" data-action="reset-password" title="Reset user's password">🔑</button>` : ''}
         <button type="button" class="secondary-button" data-action="view-json-user" title="View raw JSON">📄</button>
         <button type="button" class="secondary-button" data-action="copy-id" title="Copy user ID to clipboard">📋</button>
         ${roleName !== 'ROOT' && canDeleteUser ? `<button type="button" class="danger-button" data-action="delete-user" title="Delete user">🗑️</button>` : ''}
@@ -298,6 +332,43 @@ async function deleteUser(userId) {
   }
 }
 
+function openResetPasswordModal(userId, userName) {
+  document.getElementById('resetPasswordUserId').value = userId;
+  document.getElementById('resetPasswordUsername').textContent = userName;
+  document.getElementById('resetPasswordNew').value = '';
+  document.getElementById('resetPasswordConfirm').value = '';
+  document.getElementById('resetPasswordModal').classList.add('active');
+}
+
+function closeResetPasswordModal() {
+  document.getElementById('resetPasswordModal').classList.remove('active');
+}
+
+async function saveResetPassword() {
+  const userId = document.getElementById('resetPasswordUserId').value;
+  const newPassword = document.getElementById('resetPasswordNew').value;
+  const confirmPassword = document.getElementById('resetPasswordConfirm').value;
+
+  if (!newPassword || !confirmPassword) {
+    showToast('Please fill in all fields');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showToast('New passwords do not match');
+    return;
+  }
+
+  try {
+    await apiCall('resetPassword', [userId, newPassword]);
+    showToast('Password reset successfully');
+    closeResetPasswordModal();
+    loadCurrentView();
+  } catch (error) {
+    showToast(`Error: ${error.message}`);
+  }
+}
+
 // Make functions globally accessible
 window.openCreateUserModal = openCreateUserModal;
 window.setUsersTab = setUsersTab;
@@ -305,3 +376,7 @@ window.openSetRoleModal = openSetRoleModal;
 window.closeSetRoleModal = closeSetRoleModal;
 window.saveRoleChange = saveRoleChange;
 window.loadUserDetailView = loadUserDetailView;
+window.handleUsersSearch = handleUsersSearch;
+window.openResetPasswordModal = openResetPasswordModal;
+window.closeResetPasswordModal = closeResetPasswordModal;
+window.saveResetPassword = saveResetPassword;

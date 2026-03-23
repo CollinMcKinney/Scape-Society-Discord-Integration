@@ -15,12 +15,13 @@ const ROLES = {
 
 // Permission requirements for each view
 const VIEW_PERMISSIONS = {
-  packets: ROLES.GUEST,      // All authenticated users
-  users: ROLES.MODERATOR,    // MODERATOR+
-  files: ROLES.GUEST,        // All authenticated users
-  prefixes: ROLES.GUEST,     // All authenticated users
+  auditLogs: ROLES.GUEST,  // All authenticated users (uses packets view)
+  packets: ROLES.GUEST,    // All authenticated users
+  users: ROLES.MODERATOR,  // MODERATOR+
+  files: ROLES.GUEST,      // All authenticated users
+  prefixes: ROLES.GUEST,   // All authenticated users
   commandRoles: ROLES.GUEST, // All authenticated users (view only)
-  system: ROLES.ROOT         // ROOT only
+  system: ROLES.ROOT       // ROOT only
 };
 
 // Permission requirements for actions
@@ -29,26 +30,27 @@ const ACTION_PERMISSIONS = {
   addPacket: ROLES.ADMIN,
   editPacket: ROLES.MODERATOR,
   deletePacket: ROLES.MODERATOR,
-  
+
   // Users
   createUser: ROLES.ADMIN,
   editUser: ROLES.ADMIN,
   deleteUser: ROLES.ROOT,
-  changeRole: ROLES.ADMIN,
-  
+  changeRole: ROLES.MODERATOR,
+  resetPassword: ROLES.ROOT,
+
   // Files
   uploadFile: ROLES.ADMIN,
   deleteFile: ROLES.ADMIN,
   createCategory: ROLES.ADMIN,
   setFavicon: ROLES.ADMIN,
-  
+
   // Prefixes
   addPrefix: ROLES.ADMIN,
   deletePrefix: ROLES.ADMIN,
-  
+
   // Command Roles
   editCommandRole: ROLES.ROOT,
-  
+
   // System
   saveState: ROLES.ROOT,
   loadState: ROLES.ROOT,
@@ -100,32 +102,47 @@ function canPerformAction(actionName) {
 async function loadUserPermissions() {
   const sessionToken = sessionStorage.getItem('sessionToken');
   const storedRole = sessionStorage.getItem('currentUserRole');
-  
+
   if (!sessionToken) {
     state.currentUserRole = ROLES.GUEST;
-    return; // Don't update nav yet, wait for modals
+    updateNavVisibility();
+    return;
   }
-  
-  // Use stored role if available
+
+  // Use stored role if available - this is critical for page refresh!
   if (storedRole) {
     state.currentUserRole = parseInt(storedRole);
     console.log('[Permissions] Using stored role:', state.currentUserRole);
-    return; // Don't update nav yet, wait for modals
+    updateNavVisibility();
+    return;
   }
-  
-  // No stored role, try to determine it
+
+  // No stored role, try to determine it by fetching users
   try {
     const users = await apiCall('listUsers');
     if (users && Array.isArray(users)) {
-      // We have MODERATOR+ access
-      state.currentUserRole = ROLES.MODERATOR;
-      console.log('[Permissions] Determined role: MODERATOR+');
+      // Find ROOT user to get actual role
+      const rootUser = users.find(u => u.osrs_name === 'ROOT');
+      if (rootUser) {
+        state.currentUserRole = rootUser.role || ROLES.ROOT;
+        console.log('[Permissions] Found ROOT user, role:', state.currentUserRole);
+        // Store for future use
+        sessionStorage.setItem('currentUserRole', state.currentUserRole.toString());
+      } else {
+        // Not ROOT, but have MODERATOR+ access
+        state.currentUserRole = ROLES.MODERATOR;
+        console.log('[Permissions] Determined role: MODERATOR+');
+        sessionStorage.setItem('currentUserRole', state.currentUserRole.toString());
+      }
     }
   } catch (error) {
     // listUsers failed, we're below MODERATOR
     state.currentUserRole = ROLES.MEMBER;
     console.log('[Permissions] Determined role: MEMBER');
+    sessionStorage.setItem('currentUserRole', state.currentUserRole.toString());
   }
+  
+  updateNavVisibility();
 }
 
 /**

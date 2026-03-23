@@ -14,7 +14,9 @@ const MODAL_FILES = [
   'preview-file.html',
   'add-category.html',
   'edit-env-var.html',
-  'view-json.html'
+  'view-json.html',
+  'change-password.html',
+  'reset-password.html'
 ];
 
 // Load all modals on page load and return promise

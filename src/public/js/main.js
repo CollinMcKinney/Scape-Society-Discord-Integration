@@ -34,7 +34,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Attach login button listener
   const loginBtn = document.getElementById('loginButton');
   if (loginBtn) {
-    loginBtn.addEventListener('click', openCredentialsModal);
+    loginBtn.addEventListener('click', () => {
+      const sessionToken = sessionStorage.getItem('sessionToken');
+      if (sessionToken) {
+        // Already logged in, logout
+        logout();
+      } else {
+        // Not logged in, open login modal
+        openCredentialsModal();
+      }
+    });
   }
 
   // Wait for modals to load first
@@ -50,7 +59,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Now update session summary (modals are loaded)
   updateSessionSummary();
-  
+
+  // Load saved favicon from server
+  loadFavicon();
+
   loadCurrentView();
 
   // =====================
@@ -124,6 +136,16 @@ function handleContentPanelClick(e) {
         }).catch(error => {
           showToast(`Error: ${error.message}`);
         });
+      }
+      break;
+    case 'reset-password':
+      if (!permissions.canPerformAction('resetPassword')) {
+        showToast('You don\'t have permission to reset passwords');
+        break;
+      }
+      const userToReset = state.users.find(u => u.id === userId);
+      if (userToReset) {
+        openResetPasswordModal(userId, userToReset.osrs_name || userToReset.disc_name || userToReset.forum_name || userId);
       }
       break;
     case 'view-json-user':
@@ -208,4 +230,22 @@ function openViewJsonModal(data) {
   const modal = document.getElementById('viewJsonModal');
   document.getElementById('viewJsonContent').textContent = JSON.stringify(data, null, 2);
   modal.classList.add('active');
+}
+
+/**
+ * Load saved favicon from server
+ */
+async function loadFavicon() {
+  try {
+    const response = await fetch('/files/favicon');
+    if (response.ok) {
+      const data = await response.json();
+      const faviconLink = document.querySelector('link[rel="icon"]');
+      if (faviconLink && data.category && data.name) {
+        faviconLink.href = `/files/${data.category}/${encodeURIComponent(data.name)}`;
+      }
+    }
+  } catch (err) {
+    // Silently fail - will use default favicon
+  }
 }

@@ -5,6 +5,7 @@ import * as packets from "./packet";
 import * as user from "./user";
 import * as files from "./files";
 import * as env from "./env";
+import * as rateLimiter from "./rateLimiter";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
@@ -16,6 +17,17 @@ import type { ActorData } from "./auth";
 import type { CommandRoleRequirementDetails } from "./permission";
 import type { UserData } from "./user";
 import type { FileCategory, FileMeta } from "./files";
+
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  gray: '\x1b[90m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  red: '\x1b[31m',
+};
 
 
 const ENV_FILE = path.join(__dirname, "..", ".env");
@@ -528,6 +540,14 @@ export const listUsers = user.listUsers;
 export const getUser = user.getUser;
 export const setRole = user.setRole;
 export const deleteUser = user.deleteUser;
+/**
+ * Changes a user's password.
+ */
+export const changePassword = user.changePassword;
+/**
+ * Resets a user's password (ROOT only).
+ */
+export const resetPassword = user.resetPassword;
 export const getCategoriesExport = getCategories;
 export const createCategoryExport = createCategory;
 export const deleteCategoryExport = deleteCategory;
@@ -575,6 +595,8 @@ const adminModule = {
   getUser,
   setRole,
   deleteUser,
+  changePassword,
+  resetPassword,
   listFiles: listFilesAdmin,
   uploadFile,
   deleteFile,
@@ -614,23 +636,128 @@ router.get("/", (req: Request, res: Response) => {
 
 router.post("/call", async (req: Request, res: Response) => {
   const { functionName, args } = req.body as AdminCallRequest;
-  console.log(`[admin/call] Received request:`, { functionName, argsCount: Array.isArray(args) ? args.length : 0 });
-  
-  if (!isAdminApiFunctionName(functionName)) {
-    console.error(`[admin/call] Function not allowed:`, functionName);
-    return res.status(400).json({ error: "Function not allowed" });
+
+  // Get client IP for rate limiting
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+
+  // Check rate limit for API calls
+  const apiAllowed = await rateLimiter.checkRateLimit(clientIp, 'API');
+  if (!apiAllowed) {
+    const remaining = await rateLimiter.getRemainingAttempts(clientIp, 'API');
+    return res.status(429).json({
+      error: "Rate limit exceeded",
+      retryAfter: remaining
+    });
   }
 
   const parsedArgs = Array.isArray(args) ? args : [];
-  console.log(`[admin/call] ${new Date().toISOString()} function=${functionName} args=${JSON.stringify(parsedArgs)}`);
   
+  // Try to get username from session token (first arg) for cleaner logs
+  let userIdentifier = 'anonymous';
+  if (parsedArgs.length > 0 && typeof parsedArgs[0] === 'string') {
+    try {
+      const actor = await auth.getVerifiedActor(parsedArgs[0]);
+      userIdentifier = actor.osrs_name || actor.disc_name || actor.forum_name || actor.id.slice(0, 8);
+    } catch {
+      // Invalid session, keep anonymous
+    }
+  }
+  
+  // Log without the session token (skip first arg if it's a token)
+  const logArgs = parsedArgs.length > 0 && parsedArgs[0]?.length > 32 ? parsedArgs.slice(1) : parsedArgs;
+  const argsStr = logArgs.length === 0 ? '' : logArgs.map(a => JSON.stringify(a)).join(', ');
+  console.log(
+    `${colors.gray}[admin/call]${colors.reset} ` +
+    `${colors.blue}${new Date().toISOString()}${colors.reset} ` +
+    `${colors.cyan}${userIdentifier}${colors.reset} ` +
+    `${colors.green}'${functionName}'${colors.reset}(${colors.yellow}${argsStr}${colors.reset})`
+  );
+
+  if (!isAdminApiFunctionName(functionName)) {
+    console.error(`${colors.red}Error:${colors.reset} [admin/call] Function not allowed:`, functionName);
+    return res.status(400).json({ error: "Function not allowed" });
+  }
+
   try {
     const result = await invokeAdminCommand(functionName, parsedArgs);
     return res.json({ result });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown admin error";
-    console.error(`[admin/call] Error:`, message);
+    console.error(`${colors.red}Error:${colors.reset} [admin/call]`, message);
     return res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * POST /admin/restore-env-backup - Restore .env from backup
+ */
+router.post("/restore-env-backup", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const sessionToken = req.headers['x-session-token'] as string;
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    
+    if (!sessionToken) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const actor = await auth.getVerifiedActor(sessionToken);
+    if (actor.role < Roles.ROOT) {
+      res.status(403).json({ error: "ROOT access required" });
+      return;
+    }
+
+    // Rate limit env changes
+    const envAllowed = await rateLimiter.checkRateLimit(`${clientIp}:env`, 'ENV_CHANGE');
+    if (!envAllowed) {
+      res.status(429).json({ error: "Rate limit exceeded for environment changes" });
+      return;
+    }
+
+    const backupPath = ENV_FILE + '.backup';
+    if (!fs.existsSync(backupPath)) {
+      res.status(404).json({ error: "No backup found" });
+      return;
+    }
+
+    // Restore backup
+    fs.copyFileSync(backupPath, ENV_FILE);
+    console.log(`${colors.green}[admin]${colors.reset} Restored .env from backup`);
+
+    // Reload environment variables into process.env
+    const envVars = env.readEnvFile();
+    for (const [key, value] of Object.entries(envVars)) {
+      process.env[key] = value;
+    }
+
+    res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to restore backup";
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * GET /admin/env-backup-status - Check if backup exists
+ */
+router.get("/env-backup-status", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const sessionToken = req.headers['x-session-token'] as string;
+    if (!sessionToken) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const actor = await auth.getVerifiedActor(sessionToken);
+    if (actor.role < Roles.MODERATOR) {
+      res.status(403).json({ error: "MODERATOR+ access required" });
+      return;
+    }
+
+    const hasBackup = fs.existsSync(ENV_FILE + '.backup');
+    res.json({ hasBackup });
+  } catch (err: unknown) {
+    res.status(500).json({ error: "Failed to check backup status" });
   }
 });
 

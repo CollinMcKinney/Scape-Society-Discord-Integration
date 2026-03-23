@@ -1,11 +1,23 @@
 import crypto from "crypto";
 import * as cache from "./cache";
 import { Roles, type RoleType } from "./permission";
+import { User } from "./user";
+
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+};
 
 /**
- * Seassion time to live (TTL) in milliseconds. After this time, the session will expire and require re-authentication.
+ * Session time to live (TTL) in hours. Default: 24 hours.
+ * Can be configured via SESSION_TTL_HOURS environment variable.
  */
-const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
+const SESSION_TTL_HOURS = parseInt(process.env.SESSION_TTL_HOURS || "24");
+const SESSION_TTL_MS = SESSION_TTL_HOURS * 60 * 60 * 1000;
 
 /**
  * Hashes a raw session token before it is stored or looked up in Redis.
@@ -91,17 +103,34 @@ async function findUserByIdentifier(identifier: string): Promise<ActorData | nul
 
 /**
  * Validates credentials and returns a reusable session token on success.
- * @param identifier - User ID, OSRS name, Discord name, or forum name.
- * @param password - The plain text password (will be hashed for comparison).
+ * Supports login with just session token in either field.
+ * @param identifier - User ID, OSRS name, Discord name, forum name, OR session token.
+ * @param password - Password, hashed password, OR session token.
  */
 async function authenticate(identifier: string, password: string): Promise<string | null> {
-  console.log("Authenticating user:", { identifier });
+  // Check if identifier or password is a valid session token
+  // This allows login with just session token in either field
+  const possibleTokens = [identifier, password].filter(Boolean);
 
+  for (const token of possibleTokens) {
+    try {
+      const session = await cache.get<SessionData>(`session:${hashSessionToken(token)}`);
+      if (session && session.expires > Date.now()) {
+        console.log(`${colors.cyan}[auth]${colors.reset} Authenticated via session token:`, { userId: session.userId });
+        // Return the token they provided (valid session)
+        return token;
+      }
+    } catch (err) {
+      // Not a valid session token, continue with normal auth
+    }
+  }
+
+  // Normal authentication flow (username + password)
   const user = await findUserByIdentifier(identifier);
 
   // Don't authenticate blocked users
   if (!user || user.role === Roles.BLOCKED) {
-    console.log("Authentication failed: user blocked or not found");
+    console.log(`${colors.cyan}[auth]${colors.reset} Authentication failed: user blocked or not found`);
     return null;
   }
 
@@ -110,16 +139,14 @@ async function authenticate(identifier: string, password: string): Promise<strin
   // Allow authentication via session token if the session exists and is valid
   const existingSession = await cache.get<SessionData>(`session:${hashSessionToken(password)}`);
   if (existingSession && existingSession.userId === userId && existingSession.expires > Date.now()) {
-    console.log("Authenticated via existing session token for user:", { userId });
+    console.log(`${colors.cyan}[auth]${colors.reset} Authenticated via existing session token for user:`, { userId });
     return password;
   }
 
-  // Hash the provided password and compare
-  const hashedPassword = hashSessionToken(password);
-  
-  // Verify password hash
-  if (user.hashedPass !== hashedPassword) {
-    console.log("Authentication failed for user:", { userId });
+  // Verify password using Argon2
+  const validPassword = await User.verifyPassword(password, user.hashedPass);
+  if (!validPassword) {
+    console.log(`${colors.cyan}[auth]${colors.reset} Authentication failed for user:`, { userId });
     return null;
   }
 
@@ -134,7 +161,7 @@ async function authenticate(identifier: string, password: string): Promise<strin
 
   await cache.set(`session:${sessionTokenHash}`, newSession);
 
-  console.log("Authentication successful, new session created for user:", { userId });
+  console.log(`${colors.cyan}[auth]${colors.reset} Authentication successful, new session created for user:`, { userId });
   return sessionToken;
 }
 
@@ -147,7 +174,7 @@ async function verifySession(sessionToken: string): Promise<string | null> {
   if (!session) return null;
 
   if (session.expires < Date.now()) {
-    console.warn(`Failed session verification: token expired`);
+    console.warn(`${colors.yellow}[auth]${colors.reset} Failed session verification: token expired`);
     return null;
   }
   return session.userId;
@@ -192,7 +219,7 @@ export {
   getVerifiedActor,
   requireRole,
   hashSessionToken,
-  SESSION_TTL_MS,
+  SESSION_TTL_HOURS,
   type ActorData,
   type SessionData
 };

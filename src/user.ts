@@ -1,9 +1,21 @@
 import crypto from "crypto";
 import * as cache from "./cache";
 import * as auth from "./auth";
-import { type ActorData, type SessionData, SESSION_TTL_MS } from "./auth";
+import { type ActorData, type SessionData, SESSION_TTL_HOURS } from "./auth";
 import * as permission from "./permission";
 import { Roles, type RoleType } from "./permission";
+import argon2 from "argon2";
+
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+  gray: '\x1b[90m',
+  magenta: '\x1b[35m',
+};
 
 /**
  * Stored user record shape persisted in the datastore.
@@ -78,7 +90,27 @@ class User {
   }
 
   /**
-   * Hash a password/token
+   * Hash a password using Argon2 (with automatic salting)
+   */
+  static async hashPassword(password: string): Promise<string> {
+    if (!password) return "";
+    return await argon2.hash(password);
+  }
+  
+  /**
+   * Verify a password against an Argon2 hash
+   */
+  static async verifyPassword(password: string, hash: string): Promise<boolean> {
+    if (!password || !hash) return false;
+    try {
+      return await argon2.verify(hash, password);
+    } catch (err) {
+      return false;
+    }
+  }
+  
+  /**
+   * Hash a password/token (legacy SHA-256, kept for backward compatibility)
    */
   static hashToken(token: string): string {
     return crypto.createHash("sha256").update(token).digest("hex");
@@ -89,13 +121,14 @@ class User {
  * Prints the current root credentials to the console for local admin access.
  */
 function printRootCredentials(): void {
-  console.log("[printRootCredentials] Reading from env:", { 
-    hasUserId: !!process.env.ROOT_USER_ID, 
-    hasSessionToken: !!process.env.ROOT_SESSION_TOKEN 
-  });
-  console.log("Paste these into the admin page:");
-  console.log("ROOT_CREDENTIALS:");
-  console.log(`${process.env.ROOT_USER_ID || ""}=${process.env.ROOT_SESSION_TOKEN || ""}`);
+  const sessionToken = process.env.ROOT_SESSION_TOKEN || "";
+
+  console.log("");
+  console.log(`${colors.gray}${"─".repeat(60)}${colors.reset}`);
+  console.log(`${colors.green}ROOT LOGIN CREDENTIALS${colors.reset} ${colors.gray}(paste into Username OR Password field):${colors.reset}`);
+  console.log(`${colors.magenta}${sessionToken}${colors.reset}`);
+  console.log(`${colors.gray}${"─".repeat(60)}${colors.reset}`);
+  console.log("");
 }
 
 /**
@@ -230,7 +263,6 @@ async function removeRootUsers(): Promise<void> {
   for (const userId of userIds) {
     const existingUser = await loadStoredUser(userId);
     if (existingUser?.role === Roles.ROOT) {
-      console.log(`Deleting existing ROOT user ${userId}...`);
       await deleteUserById(userId);
     }
   }
@@ -259,7 +291,7 @@ async function authenticateUserSession(userId: string, hashedPass: string): Prom
   const newSession: SessionData = {
     userId,
     created: Date.now(),
-    expires: Date.now() + SESSION_TTL_MS
+    expires: Date.now() + (SESSION_TTL_HOURS * 60 * 60 * 1000)
   };
 
   await cache.set(`session:${sessionTokenHash}`, newSession);
@@ -291,10 +323,6 @@ function assignRootEnv(root: User, verifiedId: string, sessionToken: string): vo
   process.env.ROOT_USER_ID = verifiedId;
   process.env.ROOT_SESSION_TOKEN = sessionToken;
   process.env.ROOT_HASHED_PASS = root.hashedPass;
-  console.log("[assignRootEnv] Set ROOT credentials:", { 
-    userId: verifiedId, 
-    sessionToken: sessionToken ? `${sessionToken.substring(0, 16)}...` : 'NONE' 
-  });
 }
 
 /**
@@ -335,9 +363,7 @@ async function deleteUserById(userId: string): Promise<boolean> {
  */
 async function initializeRoot(): Promise<User | null> {
   try {
-    console.log("[initializeRoot] Starting...");
     await removeRootUsers();
-    console.log("[initializeRoot] Removed old ROOT users");
 
     const root = createUserRecord(
       {
@@ -349,27 +375,22 @@ async function initializeRoot(): Promise<User | null> {
       User.hashToken(crypto.randomBytes(32).toString("hex")),
       new Date()
     );
-    console.log("[initializeRoot] Created ROOT user record:", root.id);
 
     const saved = await saveUserRecord(root, true);
-    console.log("[initializeRoot] Saved ROOT user:", saved);
     if (!saved) {
       throw new Error("ROOT user already exists");
     }
 
     const sessionToken = await authenticateUserSession(root.id, root.hashedPass);
-    console.log("[initializeRoot] Got session token:", sessionToken ? `${sessionToken.substring(0, 16)}...` : 'NONE');
-    
     const verifiedId = await verifyAuthenticatedUser(root.id, sessionToken);
-    console.log("[initializeRoot] Verified ID:", verifiedId);
-    
+
     assignRootEnv(root, verifiedId, sessionToken);
 
-    console.log("New ROOT created for this server run.");
+    console.log(`${colors.green}[user]${colors.reset} ROOT initialized`);
     printRootCredentials();
     return root;
   } catch (error: unknown) {
-    console.error("ROOT initialization failed:", error);
+    console.error(`${colors.red}[user]${colors.reset} ROOT initialization failed:`, error);
     return null;
   }
 }
@@ -389,17 +410,19 @@ async function createUserInternal(
   role: RoleType = Roles.GUEST,
   password: string | null = null
 ): Promise<User> {
+  const hashedPass = password ? await User.hashPassword(password) : "";
+  
   const user = createUserRecord(
     { osrs_name, disc_name, forum_name },
     role,
-    User.hashToken(password || "")
+    hashedPass
   );
 
   const result = await saveUserRecord(user, true);
   if (!result) throw new Error("User already exists");
 
   if (role !== Roles.GUEST || osrs_name || disc_name || forum_name) {
-    console.log("User created:", { id: user.id, osrs_name, disc_name, forum_name, role });
+    console.log(`${colors.green}[user]${colors.reset} User created:`, { id: user.id, osrs_name, disc_name, forum_name, role });
   }
 
   return user;
@@ -445,7 +468,7 @@ async function updateUserOsrsName(userId: string, osrsName: string): Promise<boo
   user.osrs_name = normalizedName;
   await saveStoredUser(user);
   await addUserIndexes({ id: userId, osrs_name: normalizedName });
-  console.log("Guest user named:", {
+  console.log(`${colors.cyan}[user]${colors.reset} Guest user named:`, {
     id: userId,
     osrs_name: normalizedName,
     disc_name: user.disc_name || "",
@@ -568,7 +591,7 @@ async function setRole(
     throw new Error("Invalid role");
   }
 
-  console.log("[setRole] Permission check:", {
+  console.log(`${colors.cyan}[user]${colors.reset} [setRole] Permission check:`, {
     actorRole: actor.role,
     actorName: actor.osrs_name,
     targetRole: target.role,
@@ -667,6 +690,106 @@ async function deleteUser(
   return true;
 }
 
+/**
+ * Changes a user's password.
+ * @param actorSessionToken - The session token of the user requesting the change.
+ * @param targetIdentifier - The user ID or username whose password should be changed (can be own ID).
+ * @param newPassword - The new password to hash and store.
+ */
+async function changePassword(
+  actorSessionToken: string,
+  targetIdentifier: string,
+  newPassword: string
+): Promise<boolean> {
+  const actor = await auth.getVerifiedActor(actorSessionToken);
+
+  // Look up target by ID or username
+  let target: UserData | null = await loadStoredUser(targetIdentifier);
+  if (!target) {
+    // Try looking up by username
+    const osrsId = await cache.get<string>(`user:osrs:${targetIdentifier}`);
+    const discId = await cache.get<string>(`user:discord:${targetIdentifier}`);
+    const forumId = await cache.get<string>(`user:forum:${targetIdentifier}`);
+    const userId = osrsId || discId || forumId;
+    if (userId) {
+      target = await loadStoredUser(userId);
+    }
+  }
+
+  if (!target) {
+    throw new Error("User not found");
+  }
+
+  // Users can only change their own password, unless they're ROOT
+  if (actor.id !== target.id && actor.role !== Roles.ROOT) {
+    throw new Error("Can only change your own password");
+  }
+
+  // Cannot change ROOT password unless you're ROOT
+  if (target.role === Roles.ROOT && actor.role !== Roles.ROOT) {
+    throw new Error("Cannot change ROOT password");
+  }
+
+  // Hash new password with Argon2
+  const hashedPass = await User.hashPassword(newPassword);
+  target.hashedPass = hashedPass;
+
+  await saveStoredUser(target);
+  console.log(`${colors.green}[user]${colors.reset} Password changed:`, { userId: target.id });
+
+  return true;
+}
+
+/**
+ * Resets a user's password (ROOT only).
+ * @param actorSessionToken - The session token of the ROOT user requesting the reset.
+ * @param targetIdentifier - The user ID or username whose password should be reset.
+ * @param newPassword - The new password to hash and store.
+ */
+async function resetPassword(
+  actorSessionToken: string,
+  targetIdentifier: string,
+  newPassword: string
+): Promise<boolean> {
+  const actor = await auth.getVerifiedActor(actorSessionToken);
+
+  // Only ROOT can reset passwords
+  if (actor.role !== Roles.ROOT) {
+    throw new Error("Only ROOT can reset passwords");
+  }
+
+  // Look up target by ID or username
+  let target: UserData | null = await loadStoredUser(targetIdentifier);
+  if (!target) {
+    // Try looking up by username
+    const osrsId = await cache.get<string>(`user:osrs:${targetIdentifier}`);
+    const discId = await cache.get<string>(`user:discord:${targetIdentifier}`);
+    const forumId = await cache.get<string>(`user:forum:${targetIdentifier}`);
+    const userId = osrsId || discId || forumId;
+    if (userId) {
+      target = await loadStoredUser(userId);
+    }
+  }
+
+  if (!target) {
+    throw new Error("User not found");
+  }
+
+  // Cannot change ROOT password unless you're ROOT (already checked above)
+  if (target.role === Roles.ROOT && actor.role !== Roles.ROOT) {
+    throw new Error("Cannot change ROOT password");
+  }
+
+  // Hash new password with Argon2
+  const hashedPass = await User.hashPassword(newPassword);
+  target.hashedPass = hashedPass;
+
+  await saveStoredUser(target);
+  console.log(`${colors.green}[user]${colors.reset} Password reset by ROOT:`, { userId: target.id, target: target.osrs_name || target.disc_name || target.forum_name });
+
+  return true;
+}
+
 export {
   User,
   initializeRoot,
@@ -679,5 +802,7 @@ export {
   getUser,
   setRole,
   deleteUser,
+  changePassword,
+  resetPassword,
   type UserData
 };

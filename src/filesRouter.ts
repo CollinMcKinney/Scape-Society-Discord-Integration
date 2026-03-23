@@ -1,8 +1,62 @@
 import express, { Router, Request, Response } from "express";
 import * as files from "./files";
+import * as auth from "./auth";
 import type { FileCategory, FileMeta } from "./files";
 
 const router: Router = express.Router();
+
+/**
+ * Middleware to require authentication for write operations
+ */
+async function requireAuth(req: Request, res: Response, next: Function): Promise<void> {
+  // Try to get session token from header
+  const sessionToken = req.headers['x-session-token'] as string || '';
+  
+  if (!sessionToken) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  
+  try {
+    const actor = await auth.getVerifiedActor(sessionToken);
+    (req as any).actor = actor; // Attach actor to request for role checks
+    next();
+  } catch (error) {
+    res.status(401).json({ error: "Invalid or expired session" });
+  }
+}
+
+/**
+ * Middleware to require minimum role
+ */
+function requireRole(minRole: number): (req: Request, res: Response, next: Function) => void {
+  return (req: Request, res: Response, next: Function): void => {
+    const actor = (req as any).actor;
+    
+    if (!actor) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    
+    if (actor.role < minRole) {
+      res.status(403).json({ error: "Insufficient permissions" });
+      return;
+    }
+    
+    next();
+  };
+}
+
+// Role constants (should match permission.ts)
+const Roles = {
+  BLOCKED: 0,
+  GUEST: 1,
+  MEMBER: 2,
+  MODERATOR: 3,
+  ADMIN: 4,
+  OWNER: 5,
+  ROOT: 6
+};
 
 /**
  * Validates and normalizes a file category from URL params.
@@ -71,9 +125,9 @@ router.get("/categories", async (_req: Request, res: Response): Promise<void> =>
 });
 
 /**
- * POST /files/categories - Create a new category
+ * POST /files/categories - Create a new category (ADMIN+)
  */
-router.post("/categories", async (req: Request, res: Response): Promise<void> => {
+router.post("/categories", requireAuth, requireRole(Roles.ADMIN), async (req: Request, res: Response): Promise<void> => {
   try {
     const { name } = req.body;
     if (!name || typeof name !== "string") {
@@ -90,9 +144,9 @@ router.post("/categories", async (req: Request, res: Response): Promise<void> =>
 });
 
 /**
- * DELETE /files/categories/:name - Delete a category
+ * DELETE /files/categories/:name - Delete a category (ADMIN+)
  */
-router.delete("/categories/:name", async (req: Request, res: Response): Promise<void> => {
+router.delete("/categories/:name", requireAuth, requireRole(Roles.ADMIN), async (req: Request, res: Response): Promise<void> => {
   try {
     const category = validateCategory(req.params.name);
     if (!category) {
@@ -125,9 +179,9 @@ router.get("/favicon", async (_req: Request, res: Response): Promise<void> => {
 });
 
 /**
- * POST /files/favicon - Set the favicon
+ * POST /files/favicon - Set the favicon (ADMIN+)
  */
-router.post("/favicon", async (req: Request, res: Response): Promise<void> => {
+router.post("/favicon", requireAuth, requireRole(Roles.ADMIN), async (req: Request, res: Response): Promise<void> => {
   try {
     const { category, name } = req.body;
     if (!category || !name) {

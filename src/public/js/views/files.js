@@ -78,7 +78,7 @@ async function loadFilesView() {
         <input type="text" id="filesSearchInput" placeholder="Search files..."
           oninput="handleFilesSearch(this);"
           autocomplete="off" name="filesSearch"
-          value=""
+          value="${escapeHtml(state.filesSearchQuery || '')}"
           style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(7, 15, 11, 0.86); color: var(--text); font: inherit; font-size: 0.9rem;">
       </div>
 
@@ -106,7 +106,49 @@ async function loadFilesView() {
 
 function handleFilesSearch(inputElement) {
   state.filesSearchQuery = inputElement.value;
-  loadFilesView();
+  
+  // Get files for current category with search filtering
+  const currentFiles = (state.files[state.filesCurrentTab] || []).filter(f => {
+    if (!state.filesSearchQuery) return true;
+    const query = state.filesSearchQuery.toLowerCase();
+    return f.name.toLowerCase().includes(query) || f.category.toLowerCase().includes(query);
+  });
+
+  // Build file counts
+  const fileCounts = {};
+  let totalFiles = 0;
+  for (const category of state.filesCategories) {
+    fileCounts[category] = (state.files[category] || []).length;
+    totalFiles += fileCounts[category];
+  }
+
+  // Only update the results container, not the entire view
+  const resultsContainer = document.getElementById('filesResults');
+  if (resultsContainer) {
+    if (totalFiles === 0 && !state.filesSearchQuery) {
+      resultsContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📁</div>
+          <div class="empty-state-title">No Files</div>
+          <div class="empty-state-description">No files found in the cache. Click "Upload File" to add one.</div>
+        </div>
+      `;
+    } else if (state.filesCurrentTab === 'all') {
+      resultsContainer.innerHTML = Object.entries(state.files).filter(([_, files]) => files.length > 0).map(([cat, files]) => `
+        <h3 style="margin: 16px 0 8px; color: var(--accent);">${getCategoryIcon(cat)} ${formatCategoryName(cat)} (${files.length})</h3>
+        ${files.filter(f => !state.filesSearchQuery || f.name.toLowerCase().includes(state.filesSearchQuery.toLowerCase())).map(file => renderFileCard(file)).join('')}
+      `).join('');
+    } else {
+      if (currentFiles.length === 0) {
+        resultsContainer.innerHTML = '<div class="empty-state" style="padding: 20px;"><div class="empty-state-description">No files in this category matching your search.</div></div>';
+      } else {
+        resultsContainer.innerHTML = `
+          <h3 style="margin: 16px 0 8px; color: var(--accent);">${getCategoryIcon(state.filesCurrentTab)} ${formatCategoryName(state.filesCurrentTab)} (${fileCounts[state.filesCurrentTab]})</h3>
+          ${currentFiles.map(file => renderFileCard(file)).join('')}
+        `;
+      }
+    }
+  }
 }
 
 function setFilesTab(tab) {
@@ -272,9 +314,14 @@ function closeUploadFileModal() {
 }
 
 function setAsFavicon(category, fileName) {
+  const sessionToken = sessionStorage.getItem('sessionToken');
+  
   fetch('/files/favicon', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Session-Token': sessionToken || ''
+    },
     body: JSON.stringify({ category, name: fileName })
   }).then(response => {
     if (response.ok) {

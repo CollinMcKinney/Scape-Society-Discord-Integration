@@ -2,6 +2,15 @@ import fs from "fs";
 import path from "path";
 import { sAdd, sMembers, sRem, set, get, del, exists } from "./cache";
 
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+};
+
 /**
  * File category type - can be any string
  */
@@ -98,8 +107,8 @@ export async function createCategory(name: string): Promise<FileCategory> {
   
   // Add to Redis
   await sAdd(CATEGORIES_KEY, normalizedName);
-  
-  console.log(`[files] Created category: ${normalizedName}`);
+
+  console.log(`${colors.green}[files]${colors.reset} Created category: ${colors.cyan}${normalizedName}${colors.reset}`);
   return normalizedName;
 }
 
@@ -111,30 +120,30 @@ export async function createCategory(name: string): Promise<FileCategory> {
  */
 export async function deleteCategory(name: string): Promise<boolean> {
   const normalizedName = name.toLowerCase().trim();
-  
+
   if (DEFAULT_CATEGORIES.includes(normalizedName)) {
     throw new Error("Cannot delete default categories");
   }
-  
+
   // Delete all files in the category
   const files = await listFiles(normalizedName);
   for (const file of files) {
     await deleteFile(normalizedName, file);
   }
-  
+
   // Delete the category set
   await del(getFileSetKey(normalizedName));
-  
+
   // Remove from categories list
   await sRem(CATEGORIES_KEY, normalizedName);
-  
+
   // Delete the directory
   const dir = path.join(__dirname, `../data/${normalizedName}`);
   if (fs.existsSync(dir)) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
-  
-  console.log(`[files] Deleted category: ${normalizedName}`);
+
+  console.log(`${colors.green}[files]${colors.reset} Deleted category: ${colors.cyan}${normalizedName}${colors.reset}`);
   return true;
 }
 
@@ -177,9 +186,9 @@ function ensureFileDir(category: FileCategory): void {
  */
 async function loadFilesFromDisk(category: FileCategory): Promise<number> {
   const filesDir = path.join(__dirname, `../data/${category}`);
-  
+
   if (!fs.existsSync(filesDir)) {
-    console.warn(`[files] Files directory not found: ${filesDir}`);
+    console.warn(`${colors.yellow}[files]${colors.reset} Files directory not found: ${filesDir}`);
     return 0;
   }
 
@@ -189,13 +198,13 @@ async function loadFilesFromDisk(category: FileCategory): Promise<number> {
   for (const file of files) {
     const filePath = path.join(filesDir, file);
     const stat = fs.statSync(filePath);
-    
+
     if (!stat.isFile()) continue;
 
     try {
       const mimeType = getMimeType(file);
       const size = stat.size;
-      
+
       // Store metadata in Redis
       const meta: FileMeta = {
         name: file,
@@ -204,16 +213,16 @@ async function loadFilesFromDisk(category: FileCategory): Promise<number> {
         size,
         uploadedAt: stat.mtimeMs,
       };
-      
+
       await set(getFileMetaKey(category, file), meta);
       await sAdd(getFileSetKey(category), file);
       loaded++;
     } catch (err) {
-      console.error(`[files] Failed to load ${file} from ${category}:`, err);
+      console.error(`${colors.red}[files]${colors.reset} Failed to load ${file} from ${category}:`, err);
     }
   }
 
-  console.log(`[files] Loaded ${loaded} files from ${category}`);
+  console.log(`${colors.green}[files]${colors.reset} Loaded ${colors.cyan}${loaded}${colors.reset} files from ${colors.cyan}${category}${colors.reset}`);
   return loaded;
 }
 
@@ -248,8 +257,8 @@ export async function uploadFile(
   
   await set(getFileMetaKey(category, name), meta);
   await sAdd(getFileSetKey(category), name);
-  
-  console.log(`[files] Uploaded ${name} to ${category} (${size} bytes)`);
+
+  console.log(`${colors.green}[files]${colors.reset} Uploaded ${colors.cyan}${name}${colors.reset} to ${colors.cyan}${category}${colors.reset} (${colors.yellow}${size}${colors.reset} bytes)`);
   return meta;
 }
 
@@ -348,7 +357,7 @@ export async function deleteFile(
   await del(metaKey);
   await sRem(setKey, name);
 
-  console.log(`[files] Deleted ${name} from ${category}`);
+  console.log(`${colors.green}[files]${colors.reset} Deleted ${colors.cyan}${name}${colors.reset} from ${colors.cyan}${category}${colors.reset}`);
   return true;
 }
 
@@ -356,8 +365,6 @@ export async function deleteFile(
  * Initializes the file service by loading files from disk into cache.
  */
 export async function initFiles(): Promise<void> {
-  console.log("[files] Initializing file service...");
-  
   // Initialize categories list with defaults
   for (const category of DEFAULT_CATEGORIES) {
     const categories = await sMembers(CATEGORIES_KEY);
@@ -379,7 +386,7 @@ export async function initFiles(): Promise<void> {
     total += count;
   }
   
-  console.log(`[files] File service initialized with ${total} total files across ${categories.length} categories`);
+  console.log(`${colors.green}[files]${colors.reset} File service initialized with ${colors.cyan}${total}${colors.reset} total files across ${colors.cyan}${categories.length}${colors.reset} categories`);
 }
 
 /**
@@ -394,5 +401,5 @@ export async function getFavicon(): Promise<{ category: string; name: string } |
  */
 export async function setFavicon(category: string, name: string): Promise<void> {
   await set("config:favicon", { category, name });
-  console.log(`[files] Favicon set to ${category}/${name}`);
+  console.log(`${colors.green}[files]${colors.reset} Favicon set to ${colors.cyan}${category}/${name}${colors.reset}`);
 }

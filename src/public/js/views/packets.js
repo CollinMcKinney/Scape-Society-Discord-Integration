@@ -7,7 +7,9 @@ async function loadPacketsView() {
   const identifier = document.getElementById('rootCredentials').value.trim();
   const hasCredential = document.getElementById('rootPassword').value.length > 0 || sessionStorage.getItem('sessionToken');
   if (!identifier || !hasCredential) {
-    showCredentialsRequiredView('packets');
+    // Show permission denied view for unauthenticated users
+    const contentPanel = document.getElementById('contentPanel');
+    permissions.showPermissionDeniedView(contentPanel, 'auditLogs');
     return;
   }
 
@@ -74,7 +76,7 @@ async function loadPacketsView() {
   contentPanel.innerHTML = `
     <div class="content-panel-header">
       <h2 class="content-panel-title">
-        📦 Recent Packets
+        📋 Audit Logs
         <span class="compact-badge compact-badge-status">${state.packets.length} total</span>
       </h2>
       <div class="content-panel-actions">
@@ -105,9 +107,10 @@ async function loadPacketsView() {
 
       <!-- Search bar -->
       <div style="margin-bottom: 16px;">
-        <input type="text" id="packetsSearchInput" placeholder="Search packets..." 
+        <input type="text" id="packetsSearchInput" placeholder="Search packets..."
           oninput="handlePacketsSearch(this);"
           autocomplete="off" name="packetsSearch"
+          value="${escapeHtml(state.packetsSearchQuery || '')}"
           style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(7, 15, 11, 0.86); color: var(--text); font: inherit; font-size: 0.9rem;">
       </div>
 
@@ -159,7 +162,62 @@ function renderPacketsResults(filteredPackets, currentCategory, currentSubcatego
 
 function handlePacketsSearch(inputElement) {
   state.packetsSearchQuery = inputElement.value;
-  loadPacketsView();
+  
+  // Get filtered packets
+  let filteredPackets = state.packets;
+  if (state.packetsCurrentCategory !== 'all') {
+    filteredPackets = filteredPackets.filter(p => {
+      const type = p.type || 'unknown';
+      return type.startsWith(state.packetsCurrentCategory + '.') || type === state.packetsCurrentCategory;
+    });
+  }
+  if (state.packetsCurrentSubcategory !== 'all') {
+    const fullType = `${state.packetsCurrentCategory}.${state.packetsCurrentSubcategory}`;
+    filteredPackets = filteredPackets.filter(p => p.type === fullType);
+  }
+  if (state.packetsSearchQuery) {
+    const query = state.packetsSearchQuery.toLowerCase();
+    filteredPackets = filteredPackets.filter(p => {
+      const body = (p.data?.body || '').toLowerCase();
+      const actor = (p.actor?.name || '').toLowerCase();
+      const origin = (p.origin || '').toLowerCase();
+      const type = (p.type || '').toLowerCase();
+      return body.includes(query) || actor.includes(query) || origin.includes(query) || type.includes(query);
+    });
+  }
+
+  // Build category and subcategory counts
+  const categoryCounts = {};
+  const subcategoryCounts = {};
+  for (const packet of state.packets) {
+    const type = packet.type || 'unknown';
+    const parts = type.split('.');
+    const category = parts[0];
+    const subcategory = parts.length > 1 ? parts[1] : null;
+    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    if (subcategory) {
+      const key = `${category}.${subcategory}`;
+      subcategoryCounts[key] = (subcategoryCounts[key] || 0) + 1;
+    }
+  }
+
+  const uniqueCategories = Object.keys(categoryCounts).sort();
+  const currentSubcategories = state.packetsCurrentCategory !== 'all'
+    ? uniqueCategories
+        .filter(c => c === state.packetsCurrentCategory)
+        .flatMap(cat => {
+          return Object.keys(subcategoryCounts)
+            .filter(k => k.startsWith(cat + '.'))
+            .map(k => k.replace(cat + '.', ''));
+        })
+        .sort()
+    : [];
+
+  // Only update the results container, not the entire view
+  const resultsContainer = document.getElementById('packetsResults');
+  if (resultsContainer) {
+    resultsContainer.innerHTML = renderPacketsResults(filteredPackets, state.packetsCurrentCategory, currentSubcategories, subcategoryCounts, uniqueCategories);
+  }
 }
 
 function setPacketsCategory(category) {
@@ -333,3 +391,6 @@ window.closePacketModal = closePacketModal;
 window.openEditPacketModal = openEditPacketModal;
 window.savePacket = savePacket;
 window.loadPacketDetailView = loadPacketDetailView;
+window.handlePacketsSearch = handlePacketsSearch;
+window.setPacketsCategory = setPacketsCategory;
+window.setPacketsSubcategory = setPacketsSubcategory;

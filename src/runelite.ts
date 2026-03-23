@@ -6,6 +6,15 @@ import * as permission from "./permission";
 import * as auth from "./auth";
 import type { PacketValue, SerializedPacket } from "./packet";
 
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+};
+
 /**
  * Extended WebSocket interface with additional properties for client authentication and initialization.
  */
@@ -82,13 +91,13 @@ function attachToServer(httpServer: http.Server): WebSocketServer {
 
   webSocketServer.on("connection", async (webSocket: ExtendedWebSocket, req: http.IncomingMessage) => {
     const clientIp = req.socket.remoteAddress;
-    console.log(`RuneLite client connected from ${clientIp}`);
+    console.log(`${colors.green}[runelite]${colors.reset} Client connected from ${colors.cyan}${clientIp}${colors.reset}`);
     clients.add(webSocket);
     webSocket.clientAuth = undefined;
     webSocket.initialized = false;
     webSocket.guestInitTimer = setTimeout(() => {
       initializeGuestSession(webSocket, clientIp as string).catch(err => {
-        console.error(`Failed to initialize RuneLite guest session for ${clientIp}:`, err);
+        console.error(`${colors.red}[runelite]${colors.reset} Failed to initialize guest session for ${clientIp}:`, err);
         webSocket.close();
       });
     }, GUEST_INIT_DELAY_MS);
@@ -108,32 +117,32 @@ function attachToServer(httpServer: http.Server): WebSocketServer {
 
         const success = await handleIncomingPacket(packet);
         if (!success) {
-          console.warn("Failed to add packet from RuneLite client:", packet.serialize());
+          console.warn(`${colors.yellow}[runelite]${colors.reset} Failed to add packet:`, packet.serialize());
           return;
         }
 
         if (packet.type === "auth.profileSync") {
           console.log(
-            `Updated RuneLite guest profile for ${packet.actor.name || packet.data.osrsName || "Unknown"}`
+            `${colors.cyan}[runelite]${colors.reset} Updated guest profile for ${colors.cyan}${packet.actor.name || packet.data.osrsName || "Unknown"}${colors.reset}`
           );
         } else {
-          console.log(`Received and stored packet from ${packet.actor.name}: "${packet.data.body || ""}"`);
+          console.log(`${colors.cyan}[runelite]${colors.reset} Received packet from ${colors.cyan}${packet.actor.name}${colors.reset}: "${colors.yellow}${packet.data.body || ""}${colors.reset}"`);
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Unknown WebSocket error";
-        console.error("RuneLite WS error processing packet:", err);
+        console.error(`${colors.red}[runelite]${colors.reset} WS error processing packet:`, err);
         webSocket.send(JSON.stringify({ error: message }));
       }
     });
 
     webSocket.on("close", () => {
-      console.log(`RuneLite client disconnected: ${clientIp}`);
+      console.log(`${colors.green}[runelite]${colors.reset} Client disconnected: ${colors.cyan}${clientIp}${colors.reset}`);
       clearGuestInitTimer(webSocket);
       clients.delete(webSocket);
     });
 
     webSocket.on("error", (err: Error) => {
-      console.error(`RuneLite WS error from ${clientIp}:`, err);
+      console.error(`${colors.red}[runelite]${colors.reset} WS error from ${clientIp}:`, err);
     });
   });
 
@@ -172,7 +181,7 @@ async function initializeGuestSession(webSocket: ExtendedWebSocket, clientIp: st
   webSocket.initialized = true;
 
   await sendGuestIssuedPacket(webSocket, guestSession.user.id, guestSession.sessionToken);
-  console.log(`Issued new RuneLite guest session for ${clientIp}: ${guestSession.user.id}`);
+  console.log(`${colors.green}[runelite]${colors.reset} Issued guest session for ${colors.cyan}${clientIp}${colors.reset}: ${colors.yellow}${guestSession.user.id}${colors.reset}`);
 }
 
 /**
@@ -192,7 +201,7 @@ async function tryResumeGuestSession(webSocket: ExtendedWebSocket, clientIp: str
 
   const verifiedUserId = await auth.verifySession(sessionToken);
   if (!verifiedUserId) {
-    console.warn(`Failed to resume RuneLite guest session for ${clientIp}: invalid session`);
+    console.warn(`${colors.yellow}[runelite]${colors.reset} Failed to resume guest session for ${clientIp}: invalid session`);
     return false;
   }
 
@@ -209,7 +218,7 @@ async function tryResumeGuestSession(webSocket: ExtendedWebSocket, clientIp: str
   webSocket.initialized = true;
 
   await sendGuestIssuedPacket(webSocket, verifiedUserId, sessionToken);
-  console.log(`Resumed RuneLite guest session for ${clientIp}: ${verifiedUserId}`);
+  console.log(`${colors.green}[runelite]${colors.reset} Resumed guest session for ${colors.cyan}${clientIp}${colors.reset}: ${colors.yellow}${verifiedUserId}${colors.reset}`);
   return true;
 }
 

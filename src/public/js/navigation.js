@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function updateBreadcrumbs(view, params) {
   const breadcrumb = document.getElementById('breadcrumb');
   const viewLabels = {
-    packets: 'Packets',
+    auditLogs: 'Audit Logs',
     users: 'Users',
     files: 'Files',
     prefixes: 'Message Suppression',
@@ -86,7 +86,7 @@ async function loadCurrentView() {
 
   try {
     switch (state.currentView) {
-      case 'packets':
+      case 'auditLogs':
         await loadPacketsView();
         break;
       case 'packet-detail':

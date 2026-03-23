@@ -5,6 +5,15 @@ import { broadcast } from "./runelite";
 
 dotenv.config();
 
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+};
+
 // ---------------- Discord Setup ----------------
 const bot = new Client({
   intents: [
@@ -77,9 +86,9 @@ bot.on("messageCreate", async (discordMsg: Message) => {
     });
 
     await addPacket(packet);
-    console.log(`Discord -> Concord: ${packet.data.body} (${attachments.length} attachments)`);
+    console.log(`${colors.green}[discord]${colors.reset} Discord -> Concord: ${colors.cyan}${packet.data.body}${colors.reset} (${colors.yellow}${attachments.length}${colors.reset} attachments)`);
   } catch (err) {
-    console.error("Failed to relay Discord message:", err);
+    console.error(`${colors.red}[discord]${colors.reset} Failed to relay Discord message:`, err);
   }
 });
 
@@ -88,9 +97,7 @@ packetEvents.on("packetAdded", async (packetJson: Packet | SerializedPacket) => 
   const packet = Packet.fromJson(packetJson);
   if (packet.deleted) return;
   console.log(
-    `[discord.packetAdded] ${new Date().toISOString()} packetId=${packet.id} origin=${packet.origin} body=${JSON.stringify(
-      packet.data.body
-    )}`
+    `${colors.cyan}[discord]${colors.reset} [${new Date().toISOString()}] packetId=${colors.yellow}${packet.id}${colors.reset} origin=${colors.cyan}${packet.origin}${colors.reset} body=${JSON.stringify(packet.data.body)}`
   );
 
   broadcast(packet);
@@ -99,24 +106,23 @@ packetEvents.on("packetAdded", async (packetJson: Packet | SerializedPacket) => 
   if (String(packet.origin).toLowerCase() === "discord") return;
 
   try {
-    console.log(`[discord.webhookSend] ${new Date().toISOString()} packetId=${packet.id}`);
+    console.log(`${colors.cyan}[discord]${colors.reset} Webhook send: packetId=${colors.yellow}${packet.id}${colors.reset}`);
     await webhook.send({
       content: packet.data.body,
       username: `${packet.actor.name}`,
     });
-    console.log(`Concord -> Discord: ${packet.data.body}`);
+    console.log(`${colors.green}[discord]${colors.reset} Concord -> Discord: ${colors.cyan}${packet.data.body}${colors.reset}`);
   } catch (err) {
-    console.error("Webhook send failed:", err);
+    console.error(`${colors.red}[discord]${colors.reset} Webhook send failed:`, err);
   }
 });
 
 // ---------------- Startup ----------------
 async function startBot(): Promise<void> {
   const token = process.env.BOT_TOKEN;
-  console.log(`[Discord Bot] Attempting login with token: ${token ? token.substring(0, 20) + "..." : "MISSING"}`);
-  
+
   bot.once("clientReady", () => {
-    console.log(`Bot logged in as ${bot.user?.tag}`);
+    console.log(`${colors.green}[discord]${colors.reset} Bot logged in as ${colors.cyan}${bot.user?.tag}${colors.reset}`);
   });
 
   await bot.login(token).catch(console.error);
