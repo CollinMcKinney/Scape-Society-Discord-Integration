@@ -1,37 +1,19 @@
 # Caddyfile for Concord Admin Panel
 # https://caddyserver.com/docs/caddyfile
 
-# =============================================================================
-# LOCAL DEVELOPMENT WITH HTTPS (Self-Signed Certificate)
-# =============================================================================
-# Caddy will generate a self-signed certificate for localhost
-# Browser will show a warning - click "Proceed" or "Accept Risk"
+{
+	log {
+		level ERROR
+	}
+}
 
+# Local development with HTTPS (self-signed certificate)
 :443 {
-    tls internal
-    reverse_proxy concord:8080
+	tls internal
+	reverse_proxy concord:8080
 }
 
-# Also listen on port 80 and redirect to HTTPS
+# HTTP to HTTPS redirect
 :80 {
-    redir https://{host}{uri} permanent
+	redir https://{host}{uri} permanent
 }
-
-# =============================================================================
-# PRODUCTION CONFIGURATION (With Domain + Automatic TLS)
-# =============================================================================
-# For production with a real domain, use this instead:
-#
-# yourdomain.com {
-#     reverse_proxy concord:8080
-# }
-#
-# Caddy will automatically obtain and renew TLS certificates from Let's Encrypt
-
-# =============================================================================
-# NOTES:
-# =============================================================================
-# - Localhost uses self-signed certificate (browser warning is normal)
-# - Production domain gets automatic Let's Encrypt certificate
-# - TLS certificates are stored in the caddy_data volume (persists across restarts)
-# - Access via: https://localhost (not http://localhost)

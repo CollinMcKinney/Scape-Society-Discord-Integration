@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ quiet: true });
 
 import express, { Express } from "express";
 import bodyParser from "body-parser";

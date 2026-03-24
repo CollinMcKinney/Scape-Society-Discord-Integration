@@ -3,11 +3,8 @@ services:
     image: docker.io/library/redis:8.6.1-alpine
 
     container_name: redis
-    command: redis-server --port ${REDIS_PORT} # Needed if REDIS_PORT is changed from 6379 in .env
-    ports: # Bind Redis to localhost only so it's accessible from the host machine
-      # for debugging, but not exposed to the public network. Both host and 
-      # container use the same port number (from .env). Other containers
-      # communicate via the internal Compose network using the service name.
+    command: redis-server --port ${REDIS_PORT} --loglevel warning --protected-mode no
+    ports:
       - 127.0.0.1:${REDIS_PORT}:${REDIS_PORT}
     restart: unless-stopped
 
@@ -25,22 +22,17 @@ services:
     ports:
       - ${API_PORT}:${API_PORT}
     volumes:
-      # Container only
-      # - node_modules:/app/node_modules # This one is also shared for development 
+      # PnP: No node_modules mount needed
       - dist:/app/dist
-      - ./node_modules:/app/node_modules:Z # TypeScript static checker needs this host-mounted.
-      # Share with host for automatic live nodemon rebuilds.
+      # Shared for live nodemon rebuilds
+      - ./.yarn:/app/.yarn:Z
+      - ./.yarnrc.yml:/app/.yarnrc.yml:Z
       - ./.env:/app/.env:Z
       - ./nodemon.json:/app/nodemon.json:Z
       - ./package.json:/app/package.json:Z
       - ./bootstrap.js:/app/bootstrap.js:Z
       - ./tsconfig.json:/app/tsconfig.json:Z
       - ./src:/app/src:Z
-      # TODO: using host mounted /data/ to easily share its contents with host.
-      # consider that this will be frequently accessed and that using container volumes 
-      # in production is likely better performance. Maybe we can add a "download data"
-      # button to the admin panel under System, only available to the root user that
-      # allows the host OS to download the  folder through their network bridge with the container.
       - ./data:/app/data:Z
     restart: unless-stopped
 
@@ -59,7 +51,6 @@ services:
       - concord 
     
 volumes:
-  node_modules: {}
   dist: {}
   caddy_data: {}
   caddy_config: {}

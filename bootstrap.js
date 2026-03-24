@@ -41,20 +41,25 @@ function isRunningInContainer() {
 // ============================================================================
 
 function runInContainer() {
-  console.log('[bootstrap] Starting Concord in container mode...');
-  console.log('=========================================');
-  
   try {
-    // Install dependencies
-    console.log('[bootstrap] Installing dependencies...');
-    execSync('yarn install', { stdio: 'inherit' });
+    // Enable corepack.
+    execSync('corepack enable', { stdio: 'inherit' });
+    console.log('[bootstrap] corepack enabled..');
 
-    // Start nodemon with server.ts
-    console.log('[bootstrap] Starting nodemon...');
-    execSync('/app/node_modules/.bin/nodemon --legacy-watch /app/src/server.ts', {
+    // Set Yarn 4.x version.
+    execSync('yarn set version 4.13.0', { stdio: 'inherit' });
+    console.log('[bootstrap] yarn version set to 4.13.0...');
+
+    // Install dependencies with Yarn PnP.
+    execSync('yarn install', { stdio: 'inherit' });
+    console.log('[bootstrap] Container dependencies installed...');
+
+    // Start nodemon with server.ts (PnP-aware.)
+    execSync('yarn nodemon --legacy-watch /app/src/server.ts', {
       stdio: 'inherit',
       env: { ...process.env, FORCE_COLOR: '1' }
     });
+    console.log('[bootstrap] nodemon now watching for changes...');
 
   } catch (err) {
     console.error('[bootstrap] Error starting services:', err);
@@ -67,10 +72,8 @@ function runInContainer() {
 // ============================================================================
 
 function runOnHost() {
-  console.log('[bootstrap] Running on host (development mode)...');
-  console.log('=========================================');
-  
-  execSync('yarn', { stdio: 'inherit' });
+  execSync('yarn install', { stdio: 'inherit' });
+  console.log('[bootstrap] Host dependencies installed...');
 
   try {
     const envPath = path.resolve(process.cwd(), ".env");
@@ -94,19 +97,18 @@ function runOnHost() {
     }
 
     // Clean everything
-    console.log('[bootstrap] Cleaning up previous containers, networks, and volumes...');
     execSync('podman compose --file podman-compose.yaml down -v', { stdio: 'inherit' });
+    console.log('[bootstrap] Prior services terminated...');
 
     // Start services with build
-    console.log('[bootstrap] Starting services...');
     execSync('podman compose --file podman-compose.yaml up -d --build', { stdio: 'inherit' });
+    console.log('[bootstrap] Container has booted...');
 
-    // Commit the container as a local image
-    console.log('[bootstrap] Committing Concord container to local image "concord:latest"...');
-    execSync('podman commit concord concord:latest', { stdio: 'inherit' });
+    // Commit the container as a local image (quiet mode)
+    execSync('podman commit --quiet concord concord:latest');
+    console.log('[bootstrap] Container committed to "concord:latest" local image...');
 
     // Stream logs
-    console.log('[bootstrap] Streaming logs...');
     execSync('podman compose --file podman-compose.yaml logs -f', { stdio: 'inherit' });
 
   } catch (err) {
@@ -120,9 +122,6 @@ function runOnHost() {
 // ============================================================================
 
 function main() {
-  console.log('[bootstrap] Concord Bootstrap');
-  console.log('==================');
-  
   if (isRunningInContainer()) {
     runInContainer();
   } else {

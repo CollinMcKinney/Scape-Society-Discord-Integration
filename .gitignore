@@ -5,8 +5,16 @@ node_modules/
 *.tsbuildinfo
 dist/
 
-# yarn
-yarn.lock
+# Yarn PnP
+.pnp.cjs
+.pnp.loader.mjs
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Yarn lock (optional - commit if you want reproducible builds)
+# yarn.lock
 
 # Environment variables
 *.env*

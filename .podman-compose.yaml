@@ -1,0 +1,3 @@
+# Podman Compose Configuration
+# Disable external compose provider warning
+provider=internal

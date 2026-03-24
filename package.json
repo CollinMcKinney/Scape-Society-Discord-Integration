@@ -2,6 +2,7 @@
   "name": "concord",
   "version": "v1.22.22",
   "description": "Concord - Chat bridging application (TypeScript version)",
+  "private": true,
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
@@ -31,5 +32,9 @@
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
-  }
+  },
+  "resolutions": {
+    "undici": "^6.24.0"
+  },
+  "packageManager": "yarn@4.13.0"
 }
