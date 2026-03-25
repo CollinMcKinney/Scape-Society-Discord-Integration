@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import express, { Router, Request, Response } from "express";
+import express from "express";
+import type { Router, Request, Response } from "express";
 
 import * as auth from "./auth.ts";
 import type { ActorData } from "./auth.ts";

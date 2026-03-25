@@ -1,4 +1,5 @@
-import express, { Router, Request, Response } from "express";
+import express from "express";
+import type { Router, Request, Response } from "express";
 
 import * as auth from "./auth.ts";
 import * as files from "./files.ts";

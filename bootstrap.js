@@ -22,7 +22,7 @@ import path from 'node:path';
 
 function isRunningInContainer() {
   // Check for container environment variable (set in podman-compose.yaml)
-  if (process.env.CONTAINER === 'true') {
+  if (process.env.IS_CONTAINER === 'true') {
     console.log('[bootstrap] Detected container environment');
     return true;
   }
@@ -47,8 +47,8 @@ function runInContainer() {
     console.log('[bootstrap] corepack enabled..');
 
     // Set Yarn 4.x version.
-    execSync('yarn set version 4.13.0', { stdio: 'inherit' });
-    console.log('[bootstrap] yarn version set to 4.13.0...');
+    execSync('yarn set version latest', { stdio: 'inherit' });
+    console.log('[bootstrap] Set latest Yarn version...');
 
     // Install dependencies with Yarn PnP.
     execSync('yarn install', { stdio: 'inherit' });
@@ -72,9 +72,6 @@ function runInContainer() {
 // ============================================================================
 
 function runOnHost() {
-  execSync('yarn install', { stdio: 'inherit' });
-  console.log('[bootstrap] Host dependencies installed...');
-
   try {
     const envPath = path.resolve(process.cwd(), ".env");
     const examplePath = path.resolve(process.cwd(), ".env.example");

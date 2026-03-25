@@ -1,10 +1,9 @@
 services:
   redis:
     image: docker.io/library/redis:8.6.1-alpine
-
     container_name: redis
     command: redis-server --port ${REDIS_PORT} --loglevel warning --protected-mode no
-    ports:
+    ports: 
       - 127.0.0.1:${REDIS_PORT}:${REDIS_PORT}
     restart: unless-stopped
 
@@ -14,26 +13,24 @@ services:
     working_dir: /app
     command: node bootstrap.js
     environment:
-      - CONTAINER=true
-    depends_on:
+      - IS_CONTAINER=true
+    depends_on: 
       - redis
-    env_file:
-      - .env
-    ports:
+    env_file: .env
+    ports: 
       - ${API_PORT}:${API_PORT}
     volumes:
-      # PnP: No node_modules mount needed
-      - dist:/app/dist
-      # Shared for live nodemon rebuilds
-      - ./.yarn:/app/.yarn:Z
-      - ./.yarnrc.yml:/app/.yarnrc.yml:Z
-      - ./.env:/app/.env:Z
+      # Named volumes (performance + isolation)
+      - concord-yarn:/app/.yarn:Z
+      - concord-data:/app/data:Z
+
+      # Bind mounts (you edit on host)
+      - ./src:/app/src:Z
+      - ./bootstrap.js:/app/bootstrap.js:Z
       - ./nodemon.json:/app/nodemon.json:Z
       - ./package.json:/app/package.json:Z
-      - ./bootstrap.js:/app/bootstrap.js:Z
+      - ./podman-compose.yaml:/app/podman-compose.yaml:Z
       - ./tsconfig.json:/app/tsconfig.json:Z
-      - ./src:/app/src:Z
-      - ./data:/app/data:Z
     restart: unless-stopped
 
   caddy:
@@ -44,13 +41,14 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - caddy-data:/data
+      - caddy-config:/config
     restart: unless-stopped
     depends_on:
       - concord 
     
 volumes:
-  dist: {}
-  caddy_data: {}
-  caddy_config: {}
+  concord-data: {}
+  concord-yarn: {}
+  caddy-data: {}
+  caddy-config: {}
