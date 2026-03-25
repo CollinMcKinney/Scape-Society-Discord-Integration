@@ -5,14 +5,14 @@ node_modules/
 *.tsbuildinfo
 dist/
 
-# Yarn PnP
+# Yarn Berry / PnP
 .pnp.cjs
 .pnp.loader.mjs
-.yarn/cache/
-.yarn/unplugged/
+.yarn/*
 .yarn/build-state.yml
 .yarn/install-state.gz
-.yarn
+!.yarn/cache/
+!.yarn/unplugged/
 
 # Yarn lock (optional - commit if you want reproducible builds)
 yarn.lock

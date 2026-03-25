@@ -186,7 +186,7 @@ function attachToServer(httpServer: http.Server): WebSocketServer {
             `${colors.cyan}[runelite]${colors.reset} Updated guest profile for ${colors.cyan}${packet.actor.name || packet.data.osrsName || "Unknown"}${colors.reset}`
           );
         } else {
-          console.log(`${colors.cyan}[runelite]${colors.reset} Received packet from ${colors.cyan}${packet.actor.name}${colors.reset}: "${colors.yellow}${packet.data.body || ""}${colors.reset}"`);
+          console.log(`${colors.cyan}[runelite]${colors.reset} Runelite -> Concord ${colors.cyan}${packet.actor.name}${colors.reset}: "${colors.yellow}${packet.data.body || ""}${colors.reset}"`);
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Unknown WebSocket error";

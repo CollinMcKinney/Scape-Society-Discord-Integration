@@ -27,5 +27,8 @@
     "tsx": "^4.19.1",
     "typescript": "^6.0.2"
   },
+  "resolutions": {
+    "undici": "7.24.5"
+  },
   "packageManager": "yarn@4.13.0"
 }
