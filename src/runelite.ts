@@ -5,7 +5,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import * as auth from "./auth.ts";
 import { Packet, persistPacket, type PacketValue, type SerializedPacket } from "./packet.ts";
 import * as permission from "./permission.ts";
-import * as rateLimiter from "./rateLimiter.ts";
+import * as limits from "./limits.ts";
 import { createGuestSession, getRootCredentials, updateUserOsrsName } from "./user.ts";
 
 // ANSI color codes for console output
@@ -17,10 +17,10 @@ const colors = {
   red: '\x1b[31m',
 };
 
-// WebSocket rate limiting (from rateLimiter config)
-const WS_MAX_CONNECTIONS_PER_IP = rateLimiter.WS_RATE_LIMITS.MAX_CONNECTIONS;
-const WS_MAX_MESSAGES_PER_SECOND = rateLimiter.WS_RATE_LIMITS.MAX_MESSAGES_PER_SECOND;
-const WS_MAX_PAYLOAD_SIZE = rateLimiter.WS_RATE_LIMITS.MAX_PAYLOAD_SIZE;
+// WebSocket rate limiting (from limits config)
+const WS_MAX_CONNECTIONS_PER_IP = limits.WS_RATE_LIMITS.MAX_CONNECTIONS;
+const WS_MAX_MESSAGES_PER_SECOND = limits.WS_RATE_LIMITS.MAX_MESSAGES_PER_SECOND;
+const WS_MAX_PAYLOAD_SIZE = limits.WS_RATE_LIMITS.MAX_PAYLOAD_SIZE;
 
 // Connection tracking for rate limiting
 const connectionCounts = new Map<string, number>();

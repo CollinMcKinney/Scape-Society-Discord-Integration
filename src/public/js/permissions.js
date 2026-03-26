@@ -21,6 +21,8 @@ const VIEW_PERMISSIONS = {
   files: ROLES.GUEST,      // All authenticated users
   prefixes: ROLES.GUEST,   // All authenticated users
   commandRoles: ROLES.GUEST, // All authenticated users (view only)
+  discord: ROLES.MODERATOR,  // MODERATOR+ (view status)
+  limits: ROLES.MODERATOR,  // MODERATOR+ (view config)
   system: ROLES.ROOT       // ROOT only
 };
 
@@ -55,7 +57,15 @@ const ACTION_PERMISSIONS = {
   // System
   saveState: ROLES.ROOT,
   loadState: ROLES.ROOT,
-  editEnvVar: ROLES.ROOT
+  editEnvVar: ROLES.ROOT,
+
+  // Discord
+  updateDiscordConfig: ROLES.ROOT,
+  startDiscord: ROLES.ROOT,
+  stopDiscord: ROLES.ROOT,
+
+  // Limits
+  updateLimits: ROLES.ROOT
 };
 
 /**

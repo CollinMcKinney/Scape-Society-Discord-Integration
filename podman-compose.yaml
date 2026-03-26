@@ -2,9 +2,7 @@ services:
   redis:
     image: docker.io/library/redis:8.6.1-alpine
     container_name: redis
-    command: redis-server --port ${REDIS_PORT} --loglevel warning --protected-mode no
-    ports: 
-      - 127.0.0.1:${REDIS_PORT}:${REDIS_PORT}
+    command: redis-server --loglevel warning --protected-mode no
     restart: unless-stopped
 
   concord:
@@ -14,17 +12,19 @@ services:
     command: node bootstrap.js
     environment:
       - IS_CONTAINER=true
-    depends_on: 
+      - API_PORT=8080
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    expose:
+      - "8080"  # Internal port for Caddy proxy (not exposed to host)
+    depends_on:
       - redis
-    env_file: .env
-    ports: 
-      - ${API_PORT}:${API_PORT}
     volumes:
       # Named volumes (performance + isolation)
       - concord-yarn:/app/.yarn:Z
-      - concord-data:/app/data:Z
 
       # Bind mounts (you edit on host)
+      - ./data:/app/data:Z
       - ./src:/app/src:Z
       - ./bootstrap.js:/app/bootstrap.js:Z
       - ./nodemon.json:/app/nodemon.json:Z
@@ -48,7 +48,6 @@ services:
       - concord 
     
 volumes:
-  concord-data: {}
   concord-yarn: {}
   caddy-data: {}
   caddy-config: {}

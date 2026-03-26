@@ -7,37 +7,23 @@ import { createClient, type RedisClientType } from "redis";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Redis `SET` options accepted by the underlying client.
- */
+// ANSI color codes for console output
+const colors = {
+  reset: '\x1b[0m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+};
+
+// Type definitions
 type RedisSetOptions = Parameters<RedisClientType["set"]>[2];
-/**
- * Result shape returned by the underlying Redis `SET` command.
- */
 type RedisSetResult = Awaited<ReturnType<RedisClientType["set"]>>;
-/**
- * JSON object shape used when restoring string-backed backup entries.
- */
 type BackupStringValue = Record<string, unknown>;
-/**
- * Serialized list entry value stored in the JSON backup.
- */
 type BackupListValue = string[];
-/**
- * Serialized set entry value stored in the JSON backup.
- */
 type BackupSetValue = string[];
-/**
- * Serialized sorted-set entry value stored in the JSON backup.
- */
 type BackupZSetValue = Array<{ score: number; value: string }>;
-/**
- * Serialized hash entry value stored in the JSON backup.
- */
 type BackupHashValue = Record<string, string>;
-/**
- * Discriminated union describing every supported backup entry format.
- */
 type BackupEntry =
   | { type: "string"; value: BackupStringValue }
   | { type: "list"; value: BackupListValue }
@@ -48,8 +34,6 @@ type BackupEntry =
 // =====================
 // Config
 // =====================
-const redisHost = process.env.REDIS_HOST;
-const redisPort = process.env.REDIS_PORT;
 const BACKUP_DIR = path.join(__dirname, "../data");
 const BACKUP_FILE = path.join(BACKUP_DIR, "backup.json");
 const BACKUP_FILE_EXAMPLE = path.join(BACKUP_DIR, "backup.json.example");
@@ -62,27 +46,24 @@ function markCacheDirty(): void {
 }
 
 // Auto-save configuration
-const MIN_INTERVAL_MS = 5000; // 5 seconds minimum
-const MAX_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes maximum
-const SIZE_THRESHOLD_MB = 50; // Target DB size for scaling interval
+const MIN_INTERVAL_MS = 5000;
+const MAX_INTERVAL_MS = 5 * 60 * 1000;
+const SIZE_THRESHOLD_MB = 50;
 
 // Ensure backup directory exists
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-// ANSI color codes for console output
-const colors = {
-  reset: '\x1b[0m',
-  cyan: '\x1b[36m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-};
-
 // =====================
 // Redis Client
 // =====================
+const redisHost = process.env.REDIS_HOST ?? 'redis';
+const redisPort = parseInt(process.env.REDIS_PORT ?? '6379');
+
 const client: RedisClientType = createClient({
-  socket: { host: redisHost as string, port: parseInt(redisPort as string) }
+  socket: {
+    host: redisHost,
+    port: redisPort
+  }
 });
 
 client.on("error", (err: Error) => console.error(`${colors.red}[cache]${colors.reset} Redis Client Error:`, err));
@@ -90,7 +71,7 @@ client.on("error", (err: Error) => console.error(`${colors.red}[cache]${colors.r
 /**
  * Connects the shared Redis client if it has not been opened yet.
  */
-async function initStorage(): Promise<void> {
+export async function initStorage(): Promise<void> {
   if (!client.isOpen) {
     await client.connect();
     console.log(`${colors.green}[cache]${colors.reset} Redis connected!`);
@@ -360,7 +341,6 @@ async function startAutoSaveDynamic(): Promise<void> {
 
 export {
   client,
-  initStorage,
   get,
   set,
   exists,

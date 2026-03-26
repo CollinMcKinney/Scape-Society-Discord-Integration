@@ -63,12 +63,20 @@
           <span class="nav-item-icon">⚙️</span>
           <span class="nav-item-label">Permissions</span>
         </button>
+        <button class="nav-item" data-view="discord" data-tooltip="Configure Discord bot and webhook integration">
+          <span class="nav-item-icon">🎮</span>
+          <span class="nav-item-label">Discord</span>
+        </button>
       </nav>
       <nav class="nav-section">
         <div class="nav-section-title">System</div>
-        <button class="nav-item" data-view="system" data-tooltip="Save/load cache and edit environment variables">
-          <span class="nav-item-icon">🔧</span>
-          <span class="nav-item-label">System</span>
+        <button class="nav-item" data-view="limits" data-tooltip="Configure rate limits, session TTL, and server limits">
+          <span class="nav-item-icon">📊</span>
+          <span class="nav-item-label">Limits</span>
+        </button>
+        <button class="nav-item" data-view="system" data-tooltip="Save/load cache backups">
+          <span class="nav-item-icon">💾</span>
+          <span class="nav-item-label">Cache</span>
         </button>
       </nav>
     </aside>
@@ -100,6 +108,8 @@
 <script src="/js/views/packets.js"></script>
 <script src="/js/views/users.js"></script>
 <script src="/js/views/files.js"></script>
+<script src="/js/views/discord.js"></script>
+<script src="/js/views/limits.js"></script>
 <script src="/js/views/shared.js"></script>
 <script src="/js/modal-event-listeners.js"></script>
 <script src="/js/modals.js"></script>

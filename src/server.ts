@@ -8,13 +8,12 @@ import helmet from "helmet";
 
 import { initDiscord } from "./discord.ts";
 import { initStorage, saveState, loadState, startAutoSaveDynamic } from "./cache.ts";
-import { initFiles } from "./files.ts";
+import { initFiles, updateUploadSizeLimit } from "./files.ts";
 import filesRouter from "./filesRouter.ts";
 import { Packet, type SerializedPacket } from "./packet.ts";
 import { attachToServer, broadcast } from "./runelite.ts";
-import { initializeRoot } from "./user.ts";
-import { initRateLimiter } from "./rateLimiter.ts";
-
+import { initializeRoot, updateSessionTTL } from "./user.ts";
+import { initLimits } from "./limits.ts";
 import adminRouter from "./admin.ts";
 
 type Express = express.Express;
@@ -93,15 +92,20 @@ async function start(): Promise<void> {
   await initStorage();
   await loadState();
   await initializeRoot();
-  await initFiles(); // Load files from disk into cache
-  await initRateLimiter(); // Initialize rate limiter
-  await initDiscord(); // Start Discord bot
+  await initFiles();
+  await initLimits();
+  await initDiscord();
+  
+  // Load runtime config from cache
+  await updateSessionTTL();
+  await updateUploadSizeLimit();
+  
   startAutoSaveDynamic();
   await saveState();
 
-  server.listen(process.env.API_PORT, () => {
-    console.log(`${colors.green}[server]${colors.reset} Concord is Running: `
-      + `${colors.magenta}https://localhost${colors.reset}`);
+  const port = process.env.API_PORT || '8080';
+  server.listen(port, () => {
+    console.log(`${colors.green}[server]${colors.reset} Concord is running on port ${port}`);
   });
 }
 

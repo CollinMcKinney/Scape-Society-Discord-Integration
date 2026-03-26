@@ -1,0 +1,25 @@
+<!-- Edit Discord Setting Modal -->
+<div class="modal-overlay" id="editDiscordSettingModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">🎮 Edit Discord Setting</h3>
+      <button class="modal-close" id="editDiscordSettingCloseBtn" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editDiscordSettingKey">
+      <div class="field">
+        <label for="editDiscordSettingLabel">Setting</label>
+        <div id="editDiscordSettingLabel" style="color: var(--text); font-size: 0.95rem; margin-bottom: 12px;"></div>
+      </div>
+      <div class="field">
+        <label for="editDiscordSettingValue">Value</label>
+        <input type="text" id="editDiscordSettingValue" placeholder="Enter value" spellcheck="false" autocomplete="off">
+        <div class="field-help" id="editDiscordSettingHelp"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="secondary-button" id="editDiscordSettingCancelBtn">Cancel</button>
+      <button type="button" class="primary-button" id="editDiscordSettingSaveBtn">Save Changes</button>
+    </div>
+  </div>
+</div>

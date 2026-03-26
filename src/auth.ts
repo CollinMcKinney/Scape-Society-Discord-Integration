@@ -3,6 +3,7 @@ import crypto from "crypto";
 import * as cache from "./cache.ts";
 import { Roles, type RoleType } from "./permission.ts";
 import { User } from "./user.ts";
+import { getLimitsConfig } from "./limits.ts";
 
 // ANSI color codes for console output
 const colors = {
@@ -13,12 +14,15 @@ const colors = {
   red: '\x1b[31m',
 };
 
-/**
- * Session time to live (TTL) in hours. Default: 24 hours.
- * Can be configured via SESSION_TTL_HOURS environment variable.
- */
-const SESSION_TTL_HOURS = parseInt(process.env.SESSION_TTL_HOURS || "24");
-const SESSION_TTL_MS = SESSION_TTL_HOURS * 60 * 60 * 1000;
+// Session TTL loaded from cache
+let SESSION_TTL_HOURS = 24;
+let SESSION_TTL_MS = SESSION_TTL_HOURS * 60 * 60 * 1000;
+
+export async function updateSessionTTL(): Promise<void> {
+  const config = await getLimitsConfig();
+  SESSION_TTL_HOURS = parseInt(config.SESSION_TTL_HOURS) || 24;
+  SESSION_TTL_MS = SESSION_TTL_HOURS * 60 * 60 * 1000;
+}
 
 /**
  * Hashes a raw session token before it is stored or looked up in Redis.
@@ -46,6 +50,13 @@ interface SessionData {
   userId: string;
   created: number;
   expires: number;
+}
+
+/**
+ * Get session TTL in milliseconds (calculated from current runtime config)
+ */
+function getSessionTTLMS(): number {
+  return SESSION_TTL_HOURS * 60 * 60 * 1000;
 }
 
 /**
@@ -132,7 +143,7 @@ async function authenticate(identifier: string, password: string): Promise<strin
   const newSession: SessionData = {
     userId,
     created: Date.now(),
-    expires: Date.now() + SESSION_TTL_MS
+    expires: Date.now() + getSessionTTLMS()
   };
 
   await cache.set(`session:${sessionTokenHash}`, newSession);

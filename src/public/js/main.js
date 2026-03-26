@@ -63,6 +63,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load saved favicon from server
   loadFavicon();
 
+  // Restore last viewed tab on page refresh
+  const savedView = sessionStorage.getItem('currentView');
+  if (savedView && ['packets', 'users', 'files', 'prefixes', 'commandRoles', 'discord', 'system'].includes(savedView)) {
+    state.currentView = savedView;
+    // Update nav items to reflect restored view
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.view === savedView);
+    });
+  }
+
   loadCurrentView();
 
   // =====================
@@ -191,27 +201,12 @@ async function handleGlobalClick(e) {
     saveState();
     return;
   }
-  
+
   if (target.matches('[data-action="load-state"]')) {
     loadState();
     return;
   }
-  
-  if (target.matches('[data-action="save-session-ttl"]')) {
-    saveSessionTTL();
-    return;
-  }
-  
-  if (target.matches('[data-action="restore-backup"]')) {
-    restoreEnvBackup();
-    return;
-  }
-  
-  if (target.matches('[data-action="edit-env-var"]')) {
-    openEditEnvVarModal(target.dataset.key);
-    return;
-  }
-  
+
   if (target.matches('[data-action="refresh"]')) {
     loadCurrentView();
     return;

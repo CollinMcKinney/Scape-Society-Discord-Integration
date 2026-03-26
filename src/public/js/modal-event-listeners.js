@@ -50,11 +50,6 @@ function attachModalEventListeners() {
   document.getElementById('addCategoryCancelBtn')?.addEventListener('click', closeAddCategoryModal);
   document.getElementById('addCategorySaveBtn')?.addEventListener('click', addCategory);
 
-  // ===== Edit Env Var Modal =====
-  document.getElementById('editEnvVarCloseBtn')?.addEventListener('click', closeEditEnvVarModal);
-  document.getElementById('editEnvVarCancelBtn')?.addEventListener('click', closeEditEnvVarModal);
-  document.getElementById('editEnvVarSaveBtn')?.addEventListener('click', saveEnvVar);
-
   // ===== Change Password Modal =====
   document.getElementById('changePasswordCloseBtn')?.addEventListener('click', closeChangePasswordModal);
   document.getElementById('changePasswordCancelBtn')?.addEventListener('click', closeChangePasswordModal);

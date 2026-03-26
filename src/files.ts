@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { sAdd, sMembers, sRem, set, get, del, exists } from "./cache.ts";
+import { getLimitsConfig } from "./limits.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,18 +24,25 @@ const DEFAULT_ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/gif',
   'image/webp',
-  
+
   // Videos
   'video/mp4',
   'video/webm',
-  
+
   // Audio
   'audio/mpeg',
   'audio/wav'
 ];
 
-// File size limit from environment (default 10MB)
-const UPLOAD_SIZE_LIMIT = parseInt(process.env.UPLOAD_SIZE_LIMIT || '10485760');
+// Upload size limit loaded from cache
+let UPLOAD_SIZE_LIMIT = 10485760;
+
+export async function updateUploadSizeLimit(): Promise<void> {
+  const config = await getLimitsConfig();
+  UPLOAD_SIZE_LIMIT = parseInt(config.UPLOAD_SIZE_LIMIT) || 10485760;
+}
+
+export { UPLOAD_SIZE_LIMIT };
 
 // Magic byte signatures for file type validation
 const MAGIC_BYTES: Record<string, string[]> = {

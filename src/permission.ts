@@ -78,8 +78,16 @@ const DEFAULT_COMMAND_ROLE_REQUIREMENTS: Record<string, RoleType | null> = Objec
   getCategories: null,
   createCategory: Roles.ADMIN,
   deleteCategory: Roles.ROOT,
-  getEnvVars: Roles.MODERATOR,
-  setEnvVariable: Roles.ROOT,
+  getAllowedMimeTypes: null,
+  setAllowedMimeTypes: Roles.ROOT,
+  // Discord
+  getDiscordStatus: Roles.MODERATOR,
+  updateDiscordConfig: Roles.ROOT,
+  startDiscord: Roles.ROOT,
+  stopDiscord: Roles.ROOT,
+  // Limits (rate limiting, session TTL, etc.)
+  getAllLimits: Roles.MODERATOR,
+  updateLimits: Roles.ROOT,
 });
 
 /**

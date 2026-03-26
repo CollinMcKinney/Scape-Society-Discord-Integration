@@ -2,20 +2,24 @@
 <div class="modal-overlay" id="editEnvVarModal">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-title">🔧 Edit Environment Variable</h3>
+      <h3 class="modal-title">⚙️ Edit Setting</h3>
       <button class="modal-close" id="editEnvVarCloseBtn" title="Close">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="editEnvVarKey">
       <div class="field">
+        <label for="editEnvVarLabel">Setting</label>
+        <div id="editEnvVarLabel" style="color: var(--text); font-size: 0.95rem; margin-bottom: 12px;"></div>
+      </div>
+      <div class="field">
         <label for="editEnvVarValue">Value</label>
-        <input type="text" id="editEnvVarValue" placeholder="Enter new value" spellcheck="false" autocomplete="off">
-        <div class="field-help">Changes take effect immediately. Some settings may require a server restart.</div>
+        <input type="text" id="editEnvVarValue" placeholder="Enter value" spellcheck="false" autocomplete="off">
+        <div class="field-help" id="editEnvVarHelp"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="secondary-button" id="editEnvVarCancelBtn" title="Close without saving">Cancel</button>
-      <button type="button" class="primary-button" id="editEnvVarSaveBtn" title="Save the new value">Save Changes</button>
+      <button type="button" class="secondary-button" id="editEnvVarCancelBtn">Cancel</button>
+      <button type="button" class="primary-button" id="editEnvVarSaveBtn">Save Changes</button>
     </div>
   </div>
 </div>

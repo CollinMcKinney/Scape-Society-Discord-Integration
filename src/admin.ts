@@ -8,7 +8,6 @@ import type { Router, Request, Response } from "express";
 import * as auth from "./auth.ts";
 import type { ActorData } from "./auth.ts";
 import * as cache from "./cache.ts";
-import * as env from "./env.ts";
 import * as files from "./files.ts";
 import type { FileCategory, FileMeta } from "./files.ts";
 import * as permission from "./permission.ts";
@@ -17,9 +16,10 @@ import type { CommandRoleRequirementDetails } from "./permission.ts";
 import * as packets from "./packet.ts";
 import type { ActorInfo, PacketData, PacketObject, SerializedPacket } from "./packet.ts";
 import { broadcastSuppressedPrefixesUpdate, broadcastDiscordInviteUrlUpdate } from "./runelite.ts";
-import * as rateLimiter from "./rateLimiter.ts";
+import * as limits from "./limits.ts";
 import * as user from "./user.ts";
 import type { UserData } from "./user.ts";
+import * as discord from "./discord.ts";
 
 // ANSI color codes for console output
 const colors = {
@@ -35,21 +35,11 @@ const colors = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const ENV_FILE = path.join(__dirname, "..", ".env");
-const ENV_KEY_PATTERN = /^[A-Z0-9_]+$/i;
-
 /**
  * Lightweight actor wrapper used by admin auth helpers when a command allows anonymous access.
  */
 type AdminActor = ActorData | null;
-/**
- * Result payload returned after a `.env` variable is updated from the admin panel.
- */
-type EnvVarUpdateResult = { key: string; value: string; persisted: boolean; note: string };
-/**
- * Auth context passed between admin command helpers.
- */
-type AdminContext = { actorId: string | null; actorSessionToken: string };
+
 /**
  * Request body shape accepted by the `/admin/call` endpoint.
  */
@@ -92,22 +82,13 @@ async function requireCommandRole(
 }
 
 /**
- * Creates a normalized admin auth context object.
- * @param actorSessionToken - The session token presented by the actor.
- * @returns A reusable auth context object for downstream admin helpers.
- */
-function createAdminContext(actorSessionToken: string): AdminContext {
-  return { actorId: null, actorSessionToken };
-}
-
-/**
  * Enforces the configured role requirement for an admin command using a shared context object.
  * @param commandName - The admin command identifier whose access should be checked.
- * @param context - The normalized actor/session context for the current call.
+ * @param actorSessionToken - The session token presented by the caller.
  * @returns The verified actor when one exists, or null for anonymous open commands.
  */
-async function requireAdminCommand(commandName: string, context: AdminContext): Promise<AdminActor> {
-  return requireCommandRole(commandName, context.actorSessionToken);
+async function requireAdminCommand(commandName: string, actorSessionToken: string): Promise<AdminActor> {
+  return requireCommandRole(commandName, actorSessionToken);
 }
 
 /**
@@ -127,7 +108,7 @@ async function resolveActorName(actorId: string | null, actorDetails: Partial<Ac
 
 /**
  * Builds the admin-origin packet used by the `addPacket` command.
- * @param context - The normalized actor/session context for the current admin call.
+ * @param actorSessionToken - The session token used to authorize the caller and attach auth context.
  * @param body - The message body to place in the packet payload.
  * @param actorDetails - Optional packet actor overrides supplied by the caller.
  * @param origin - The origin label to store on the packet.
@@ -136,7 +117,7 @@ async function resolveActorName(actorId: string | null, actorDetails: Partial<Ac
  * @returns A newly constructed packet ready for persistence.
  */
 async function buildAdminPacket(
-  context: AdminContext,
+  actorSessionToken: string,
   body: string,
   actorDetails: Partial<ActorInfo>,
   origin: string,
@@ -147,14 +128,14 @@ async function buildAdminPacket(
     type: "chat.message",
     origin,
     actor: {
-      id: context.actorId,
-      name: await resolveActorName(context.actorId, actorDetails),
+      id: null,
+      name: await resolveActorName(null, actorDetails),
       roles: actorDetails.roles || [],
       permissions: actorDetails.permissions || [],
     },
     auth: {
-      userId: context.actorId,
-      sessionToken: context.actorSessionToken,
+      userId: null,
+      sessionToken: actorSessionToken,
     },
     data: {
       body,
@@ -162,83 +143,6 @@ async function buildAdminPacket(
     },
     meta,
   });
-}
-
-/**
- * Validates and normalizes an environment variable name before persistence.
- * @param key - The raw environment variable name supplied by the caller.
- * @returns A trimmed, validated environment variable key.
- */
-function normalizeEnvKey(key: string): string {
-  if (!key || typeof key !== "string") {
-    throw new Error("Environment variable key is required");
-  }
-
-  const normalizedKey = key.trim();
-  if (!ENV_KEY_PATTERN.test(normalizedKey)) {
-    throw new Error("Environment variable key contains invalid characters");
-  }
-
-  return normalizedKey;
-}
-
-/**
- * Normalizes a dynamic environment variable value into a string.
- * @param value - The raw value supplied by the caller.
- * @returns The normalized string value written into process.env and `.env`.
- */
-function normalizeEnvValue(value: unknown): string {
-  return value == null ? "" : String(value);
-}
-
-/**
- * Reads the current `.env` file contents when the file exists locally.
- * @returns The raw `.env` file contents, or an empty string when no file exists yet.
- */
-function readEnvFileContents(): string {
-  if (!fs.existsSync(ENV_FILE)) {
-    return "";
-  }
-
-  return fs.readFileSync(ENV_FILE, "utf8");
-}
-
-/**
- * Replaces or appends a single key/value line inside the `.env` contents.
- * @param envContents - The current raw `.env` file contents.
- * @param key - The environment variable key to replace or append.
- * @param value - The string value to persist for the key.
- * @returns The updated `.env` file contents.
- */
-function upsertEnvFileValue(envContents: string, key: string, value: string): string {
-  const envLine = `${key}=${value}`;
-  const envPattern = new RegExp(`^${key}=.*$`, "m");
-  return envPattern.test(envContents)
-    ? envContents.replace(envPattern, envLine)
-    : `${envContents}${envContents && !envContents.endsWith("\n") ? "\n" : ""}${envLine}\n`;
-}
-
-/**
- * Writes an environment variable to both process memory and the local `.env` file.
- * @param key - The environment variable key to write.
- * @param value - The normalized string value to persist.
- */
-function persistEnvVar(key: string, value: string): void {
-  process.env[key] = value;
-  const envContents = readEnvFileContents();
-  const updatedContents = upsertEnvFileValue(envContents, key, value);
-  fs.writeFileSync(ENV_FILE, updatedContents, "utf8");
-}
-
-/**
- * Emits any live runtime updates triggered by a changed environment variable.
- * @param key - The environment variable key that was changed.
- * @param value - The normalized value that was just persisted.
- */
-function broadcastEnvVarUpdate(key: string, value: string): void {
-  if (key === "DISCORD_INVITE_URL") {
-    broadcastDiscordInviteUrlUpdate(value);
-  }
 }
 
 /**
@@ -259,9 +163,8 @@ async function addPacket(
   data: PacketData = {},
   meta: PacketObject = {}
 ): Promise<boolean> {
-  const context = createAdminContext(actorSessionToken);
-  await requireAdminCommand("addPacket", context);
-  const packet = await buildAdminPacket(context, body, actorDetails, origin, data, meta);
+  await requireAdminCommand("addPacket", actorSessionToken);
+  const packet = await buildAdminPacket(actorSessionToken, body, actorDetails, origin, data, meta);
 
   console.log(
     `[admin.addPacket] ${new Date().toISOString()} packetId=${packet.id} origin=${packet.origin} body=${JSON.stringify(
@@ -277,7 +180,7 @@ async function addPacket(
  * @param limit - The maximum number of recent packets to return.
  */
 async function getPackets(actorSessionToken: string, limit = 50): Promise<SerializedPacket[]> {
-  await requireAdminCommand("getPackets", createAdminContext(actorSessionToken));
+  await requireAdminCommand("getPackets", actorSessionToken);
   return packets.getPackets(limit);
 }
 
@@ -287,7 +190,7 @@ async function getPackets(actorSessionToken: string, limit = 50): Promise<Serial
  * @param packetId - The unique packet id that should be marked deleted.
  */
 async function deletePacket(actorSessionToken: string, packetId: string): Promise<boolean> {
-  await requireAdminCommand("deletePacket", createAdminContext(actorSessionToken));
+  await requireAdminCommand("deletePacket", actorSessionToken);
   return packets.deletePacket(packetId);
 }
 
@@ -302,34 +205,8 @@ async function editPacket(
   packetId: string,
   newContent: string
 ): Promise<boolean> {
-  await requireAdminCommand("editPacket", createAdminContext(actorSessionToken));
+  await requireAdminCommand("editPacket", actorSessionToken);
   return packets.editPacket(packetId, newContent);
-}
-
-/**
- * Updates an environment variable in-memory and in the local `.env` file.
- * @param actorSessionToken - The session token used to authorize the caller.
- * @param key - The environment variable name to update.
- * @param value - The new value to assign before persisting it to `.env`.
- */
-async function setEnvVar(
-  actorSessionToken: string,
-  key: string,
-  value: unknown
-): Promise<EnvVarUpdateResult> {
-  await requireAdminCommand("setEnvVar", createAdminContext(actorSessionToken));
-  const normalizedKey = normalizeEnvKey(key);
-  const normalizedValue = normalizeEnvValue(value);
-
-  persistEnvVar(normalizedKey, normalizedValue);
-  broadcastEnvVarUpdate(normalizedKey, normalizedValue);
-
-  return {
-    key: normalizedKey,
-    value: normalizedValue,
-    persisted: true,
-    note: "Updated process.env immediately. Some settings may still require a server restart to fully take effect.",
-  };
 }
 
 /**
@@ -337,7 +214,7 @@ async function setEnvVar(
  * @param actorSessionToken - The session token used to authorize the caller.
  */
 async function getSuppressedPrefixes(actorSessionToken: string): Promise<string[]> {
-  await requireAdminCommand("getSuppressedPrefixes", createAdminContext(actorSessionToken));
+  await requireAdminCommand("getSuppressedPrefixes", actorSessionToken);
   return permission.getSuppressedPrefixes();
 }
 
@@ -350,7 +227,7 @@ async function setSuppressedPrefixes(
   actorSessionToken: string,
   prefixes: string[]
 ): Promise<string[]> {
-  await requireAdminCommand("setSuppressedPrefixes", createAdminContext(actorSessionToken));
+  await requireAdminCommand("setSuppressedPrefixes", actorSessionToken);
   const updatedPrefixes = await permission.setSuppressedPrefixes(prefixes);
   broadcastSuppressedPrefixesUpdate(updatedPrefixes);
   return updatedPrefixes;
@@ -361,7 +238,7 @@ async function setSuppressedPrefixes(
  * @param actorSessionToken - The session token used to authorize the caller.
  */
 async function getCommandRoleRequirements(actorSessionToken: string): Promise<Record<string, CommandRoleRequirementDetails>> {
-  await requireAdminCommand("getCommandRoleRequirements", createAdminContext(actorSessionToken));
+  await requireAdminCommand("getCommandRoleRequirements", actorSessionToken);
   return permission.getCommandRoleRequirements();
 }
 
@@ -376,7 +253,7 @@ async function setCommandRoleRequirement(
   commandName: string,
   role: string | number | null
 ): Promise<{ commandName: string; roleValue: RoleType | null; roleName: string }> {
-  await requireAdminCommand("setCommandRoleRequirement", createAdminContext(actorSessionToken));
+  await requireAdminCommand("setCommandRoleRequirement", actorSessionToken);
   return permission.setCommandRoleRequirement(commandName, role);
 }
 
@@ -386,7 +263,7 @@ async function setCommandRoleRequirement(
  * @param actorSessionToken - The session token used to authorize the caller.
  */
 async function listFilesAdmin(actorSessionToken: string): Promise<Record<FileCategory, FileMeta[]>> {
-  await requireAdminCommand("listFiles", createAdminContext(actorSessionToken));
+  await requireAdminCommand("listFiles", actorSessionToken);
   return files.listAllFiles();
 }
 
@@ -400,7 +277,7 @@ async function listFilesByCategory(
   actorSessionToken: string,
   category: FileCategory
 ): Promise<FileMeta[]> {
-  await requireAdminCommand("listFiles", createAdminContext(actorSessionToken));
+  await requireAdminCommand("listFiles", actorSessionToken);
   const fileList = await files.listFiles(category);
   const metadata: FileMeta[] = [];
   
@@ -430,7 +307,7 @@ async function uploadFile(
   base64Data: string,
   mimeType?: string
 ): Promise<FileMeta> {
-  await requireAdminCommand("uploadFile", createAdminContext(actorSessionToken));
+  await requireAdminCommand("uploadFile", actorSessionToken);
 
   // Validate category name format
   if (!/^[a-z0-9_-]+$/.test(category)) {
@@ -458,14 +335,14 @@ async function deleteFile(
   category: FileCategory,
   name: string
 ): Promise<boolean> {
-  await requireAdminCommand("deleteFile", createAdminContext(actorSessionToken));
-  
+  await requireAdminCommand("deleteFile", actorSessionToken);
+
   // Validate category
   const validCategories: FileCategory[] = await files.getCategories();
   if (!validCategories.includes(category)) {
     throw new Error(`Invalid category. Must be one of: ${validCategories.join(", ")}`);
   }
-  
+
   return await files.deleteFile(category, name);
 }
 
@@ -477,7 +354,7 @@ async function deleteFile(
 async function getCategories(
   actorSessionToken: string
 ): Promise<FileCategory[]> {
-  await requireAdminCommand("getCategories", createAdminContext(actorSessionToken));
+  await requireAdminCommand("getCategories", actorSessionToken);
   return files.getCategories();
 }
 
@@ -491,7 +368,7 @@ async function createCategory(
   actorSessionToken: string,
   name: string
 ): Promise<FileCategory> {
-  await requireAdminCommand("createCategory", createAdminContext(actorSessionToken));
+  await requireAdminCommand("createCategory", actorSessionToken);
   return files.createCategory(name);
 }
 
@@ -504,7 +381,7 @@ async function deleteCategory(
   actorSessionToken: string,
   name: string
 ): Promise<boolean> {
-  await requireAdminCommand("deleteCategory", createAdminContext(actorSessionToken));
+  await requireAdminCommand("deleteCategory", actorSessionToken);
   return files.deleteCategory(name);
 }
 
@@ -522,23 +399,23 @@ export const verifySession = auth.verifySession;
  * @param actorSessionToken - The session token used to authorize the caller.
  */
 export const saveState = async (actorSessionToken: string) => {
-  await requireAdminCommand("saveState", createAdminContext(actorSessionToken));
+  await requireAdminCommand("saveState", actorSessionToken);
   return cache.saveState();
 };
 
 export const loadState = async (actorSessionToken: string) => {
-  await requireAdminCommand("loadState", createAdminContext(actorSessionToken));
+  await requireAdminCommand("loadState", actorSessionToken);
   return cache.loadState();
 };
 
-export { addPacket, getPackets, deletePacket, editPacket, setEnvVar, getSuppressedPrefixes, setSuppressedPrefixes, getCommandRoleRequirements, setCommandRoleRequirement };
+export { addPacket, getPackets, deletePacket, editPacket, getSuppressedPrefixes, setSuppressedPrefixes, getCommandRoleRequirements, setCommandRoleRequirement };
 export { listFilesAdmin as listFiles, uploadFile, deleteFile, getCategories, createCategory, deleteCategory };
 
 /**
  * Gets the list of allowed MIME types for file uploads.
  */
 export const getAllowedMimeTypes = async (actorSessionToken: string): Promise<string[]> => {
-  await requireAdminCommand("getAllowedMimeTypes", createAdminContext(actorSessionToken));
+  await requireAdminCommand("getAllowedMimeTypes", actorSessionToken);
   return files.getAllowedMimeTypes();
 };
 
@@ -563,7 +440,7 @@ export const createUser = async (
   forum_name: string,
   password: string
 ) => {
-  await requireAdminCommand("createUser", createAdminContext(actorSessionToken));
+  await requireAdminCommand("createUser", actorSessionToken);
   return user.createUser(actorSessionToken, osrs_name, disc_name, forum_name, password);
 };
 export const listUsers = user.listUsers;
@@ -582,28 +459,81 @@ export const getCategoriesExport = getCategories;
 export const createCategoryExport = createCategory;
 export const deleteCategoryExport = deleteCategory;
 
+// ============================================================================
+// Discord Configuration
+// ============================================================================
+
 /**
- * Gets all environment variables.
+ * Gets Discord connection status and configuration.
  * @param actorSessionToken - The session token used to authorize the caller.
  */
-async function getEnvVars(actorSessionToken: string): Promise<Record<string, string>> {
-  await requireAdminCommand("getEnvVars", createAdminContext(actorSessionToken));
-  return env.readEnvFile();
+async function getDiscordStatusWrapper(actorSessionToken: string): Promise<{
+  isConnected: boolean;
+  isConfigured: boolean;
+  botTag?: string;
+  channelId?: string;
+}> {
+  await requireCommandRole("getDiscordStatus", actorSessionToken);
+  return discord.getDiscordStatus();
 }
 
 /**
- * Sets an environment variable.
+ * Updates Discord configuration.
  * @param actorSessionToken - The session token used to authorize the caller.
- * @param key - The variable name.
- * @param value - The value to set.
+ * @param config - Discord configuration to update.
+ * @param autoConnect - Whether to automatically connect after updating.
  */
-async function setEnvVariable(
+async function updateDiscordConfigWrapper(
   actorSessionToken: string,
-  key: string,
-  value: string
-): Promise<void> {
-  await requireAdminCommand("setEnvVar", createAdminContext(actorSessionToken));
-  env.setEnvVar(key, value);
+  config: { 
+    botToken?: string; 
+    channelId?: string; 
+    webhookUrl?: string;
+    permissionsInteger?: string;
+    clientId?: string;
+    clientSecret?: string;
+    redirectUri?: string;
+    discordInviteUrl?: string;
+  },
+  autoConnect?: boolean
+): Promise<{ success: boolean; error?: string }> {
+  await requireCommandRole("updateDiscordConfig", actorSessionToken);
+  return discord.updateDiscordConfig(config, autoConnect);
+}
+
+/**
+ * Starts Discord bot connection.
+ * @param actorSessionToken - The session token used to authorize the caller.
+ */
+async function startDiscordWrapper(actorSessionToken: string): Promise<{ success: boolean; error?: string }> {
+  await requireCommandRole("startDiscord", actorSessionToken);
+  return discord.startDiscord();
+}
+
+/**
+ * Stops Discord bot connection.
+ * @param actorSessionToken - The session token used to authorize the caller.
+ */
+async function stopDiscordWrapper(actorSessionToken: string): Promise<void> {
+  await requireCommandRole("stopDiscord", actorSessionToken);
+  await discord.stopDiscord();
+}
+
+// ============================================================================
+// Limits Configuration (Rate Limiting, Session TTL, etc.)
+// ============================================================================
+
+async function getAllLimitsWrapper(actorSessionToken: string): Promise<Array<object>> {
+  await requireCommandRole("getAllLimits", actorSessionToken);
+  return limits.getAllLimits();
+}
+
+async function updateLimitsWrapper(
+  actorSessionToken: string,
+  config: Record<string, string>
+): Promise<{ success: boolean; error?: string }> {
+  await requireCommandRole("updateLimits", actorSessionToken);
+  return limits.saveLimitsConfig(config);
 }
 
 const adminModule = {
@@ -615,7 +545,6 @@ const adminModule = {
   getPackets,
   deletePacket,
   editPacket,
-  setEnvVar,
   getSuppressedPrefixes,
   setSuppressedPrefixes,
   getCommandRoleRequirements,
@@ -635,8 +564,14 @@ const adminModule = {
   deleteCategory,
   getAllowedMimeTypes,
   setAllowedMimeTypes,
-  getEnvVars,
-  setEnvVariable,
+  // Discord
+  getDiscordStatus: getDiscordStatusWrapper,
+  updateDiscordConfig: updateDiscordConfigWrapper,
+  startDiscord: startDiscordWrapper,
+  stopDiscord: stopDiscordWrapper,
+  // Limits (rate limiting, session TTL, etc.)
+  getAllLimits: getAllLimitsWrapper,
+  updateLimits: updateLimitsWrapper,
 };
 
 type AdminApiFunctionName = keyof typeof adminModule;
@@ -745,9 +680,9 @@ router.post("/call", async (req: Request, res: Response) => {
 
   // Apply stricter rate limiting for authentication attempts
   if (isLoginAttempt) {
-    const loginAllowed = await rateLimiter.checkRateLimit(rateLimitKey, 'LOGIN');
+    const loginAllowed = await limits.checkRateLimit(rateLimitKey, 'LOGIN');
     if (!loginAllowed) {
-      const remaining = await rateLimiter.getRemainingAttempts(rateLimitKey, 'LOGIN');
+      const remaining = await limits.getRemainingAttempts(rateLimitKey, 'LOGIN');
       return res.status(429).json({
         error: "Too many login attempts",
         retryAfter: remaining
@@ -755,9 +690,9 @@ router.post("/call", async (req: Request, res: Response) => {
     }
   } else {
     // Check rate limit for other API calls
-    const apiAllowed = await rateLimiter.checkRateLimit(rateLimitKey, 'API');
+    const apiAllowed = await limits.checkRateLimit(rateLimitKey, 'API');
     if (!apiAllowed) {
-      const remaining = await rateLimiter.getRemainingAttempts(rateLimitKey, 'API');
+      const remaining = await limits.getRemainingAttempts(rateLimitKey, 'API');
       return res.status(429).json({
         error: "Rate limit exceeded",
         retryAfter: remaining
@@ -813,79 +748,6 @@ router.post("/call", async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : "Unknown admin error";
     console.error(`${colors.red}Error:${colors.reset} [admin/call]`, message);
     return res.status(500).json({ error: message });
-  }
-});
-
-/**
- * POST /admin/restore-env-backup - Restore .env from backup
- */
-router.post("/restore-env-backup", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const sessionToken = req.headers['x-session-token'] as string;
-    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
-    
-    if (!sessionToken) {
-      res.status(401).json({ error: "Authentication required" });
-      return;
-    }
-
-    const actor = await auth.getVerifiedActor(sessionToken);
-    if (actor.role < Roles.ROOT) {
-      res.status(403).json({ error: "ROOT access required" });
-      return;
-    }
-
-    // Rate limit env changes
-    const envAllowed = await rateLimiter.checkRateLimit(`${clientIp}:env`, 'ENV_CHANGE');
-    if (!envAllowed) {
-      res.status(429).json({ error: "Rate limit exceeded for environment changes" });
-      return;
-    }
-
-    const backupPath = ENV_FILE + '.backup';
-    if (!fs.existsSync(backupPath)) {
-      res.status(404).json({ error: "No backup found" });
-      return;
-    }
-
-    // Restore backup
-    fs.copyFileSync(backupPath, ENV_FILE);
-    console.log(`${colors.green}[admin]${colors.reset} Restored .env from backup`);
-
-    // Reload environment variables into process.env
-    const envVars = env.readEnvFile();
-    for (const [key, value] of Object.entries(envVars)) {
-      process.env[key] = value;
-    }
-
-    res.json({ success: true });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to restore backup";
-    res.status(500).json({ error: message });
-  }
-});
-
-/**
- * GET /admin/env-backup-status - Check if backup exists
- */
-router.get("/env-backup-status", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const sessionToken = req.headers['x-session-token'] as string;
-    if (!sessionToken) {
-      res.status(401).json({ error: "Authentication required" });
-      return;
-    }
-
-    const actor = await auth.getVerifiedActor(sessionToken);
-    if (actor.role < Roles.MODERATOR) {
-      res.status(403).json({ error: "MODERATOR+ access required" });
-      return;
-    }
-
-    const hasBackup = fs.existsSync(ENV_FILE + '.backup');
-    res.json({ hasBackup });
-  } catch (err: unknown) {
-    res.status(500).json({ error: "Failed to check backup status" });
   }
 });
 

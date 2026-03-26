@@ -76,21 +76,19 @@ function runOnHost() {
     const envPath = path.resolve(process.cwd(), ".env");
     const examplePath = path.resolve(process.cwd(), ".env.example");
 
-    // Handle .env file
+    // Handle .env file (optional - config is now in admin panel)
     try {
       if (fs.existsSync(envPath)) {
-        console.log('.env file found');
-      } else {
-        if (!fs.existsSync(examplePath)) {
-          console.error("No .env.example found. Cannot create .env");
-          process.exit(1);
-        }
+        console.log('.env file found (optional - config is now in admin panel)');
+      } else if (fs.existsSync(examplePath)) {
         fs.copyFileSync(examplePath, envPath);
-        console.log("Created .env from .env.example");
+        console.log("Created .env from .env.example (optional)");
+      } else {
+        console.log('No .env file - all configuration is done via the admin panel');
       }
     } catch (err) {
-      console.error("Error handling .env file:", err);
-      process.exit(1);
+      console.warn("Warning: Could not handle .env file:", err.message);
+      console.log('Continuing without .env - use admin panel for configuration');
     }
 
     // Clean everything

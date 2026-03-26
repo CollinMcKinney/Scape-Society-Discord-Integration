@@ -17,7 +17,8 @@ const MODAL_FILES = [
   'view-json.html',
   'change-password.html',
   'reset-password.html',
-  'add-mime-type.html'
+  'add-mime-type.html',
+  'edit-discord-setting.html'
 ];
 
 // Load all modals on page load and return promise
@@ -38,10 +39,15 @@ window.loadModals = async function() {
     const modals = await Promise.all(modalPromises);
     container.innerHTML = modals.join('\n');
     console.log('[Modals] Loaded', MODAL_FILES.length, 'modal files');
-    
+
     // Attach event listeners after modals are loaded
     if (window.attachModalEventListeners) {
       window.attachModalEventListeners();
+    }
+    
+    // Attach Discord modal listeners
+    if (window.attachDiscordSettingModalListeners) {
+      window.attachDiscordSettingModalListeners();
     }
   } catch (error) {
     console.error('Failed to load modals:', error);
