@@ -12,6 +12,7 @@ dist/
 .yarn/build-state.yml
 .yarn/install-state.gz
 !.yarn/cache/
+!.yarn/sdks
 !.yarn/unplugged/
 
 # Yarn lock (optional - commit if you want reproducible builds)
