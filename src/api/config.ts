@@ -17,6 +17,7 @@ export async function getDiscordStatus(): Promise<{
  * Updates Discord configuration.
  */
 export async function updateDiscordConfig(
+  sessionToken: string,
   config: {
     botToken?: string;
     channelId?: string;
@@ -56,6 +57,9 @@ export async function getAllLimits(): Promise<Array<object>> {
 /**
  * Updates runtime limits configuration.
  */
-export async function updateLimits(config: Record<string, string>): Promise<{ success: boolean; error?: string }> {
+export async function updateLimits(
+  sessionToken: string,
+  config: Record<string, string>
+): Promise<{ success: boolean; error?: string }> {
   return limits.saveLimitsConfig(config);
 }
