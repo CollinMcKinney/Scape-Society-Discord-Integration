@@ -14,7 +14,7 @@ import { Packet, type SerializedPacket } from "./packet.ts";
 import { attachToServer, broadcast, closeWebSocketServer } from "./runelite.ts";
 import { initializeRoot, updateSessionTTL } from "./user.ts";
 import { initLimits } from "./limits.ts";
-import adminRouter from "./api/index.ts";
+import apiRouter from "./api/index.ts";
 
 type Express = express.Express;
 
@@ -62,7 +62,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
 // Dashboard router - UI for all authenticated users (not just admins)
-app.use("/dashboard", adminRouter);
+app.use("/dashboard", apiRouter);
 app.use("/files", filesRouter);
 app.use("/modals", express.static(path.join(__dirname, "public", "modals")));
 
