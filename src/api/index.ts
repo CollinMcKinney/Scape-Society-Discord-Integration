@@ -47,7 +47,7 @@ type ApiCallRequest = { functionName?: unknown; args?: unknown };
 type ApiCommandHandler = (...args: unknown[]) => Promise<unknown>;
 
 const apiRouter: Router = express.Router();
-router.use(express.json());
+apiRouter.use(express.json());
 
 // ============================================================================
 // Auth Helpers
@@ -69,9 +69,21 @@ async function requireRole(
 
 /**
  * Enforces the configured role requirement for an API command.
+ * For commands that allow anonymous access, pass an empty session token.
  */
 async function requireApiCommand(commandName: string, actorSessionToken: string): Promise<ApiActor> {
   const minimumRole = await getRequiredRoleForCommand(commandName);
+  
+  // If no role required, allow anonymous access
+  if (minimumRole == null) {
+    return null;
+  }
+  
+  // If session token is empty/null, user can't meet role requirement
+  if (!actorSessionToken) {
+    throw new Error("Authentication required");
+  }
+  
   return requireRole(actorSessionToken, minimumRole);
 }
 
@@ -79,8 +91,23 @@ async function requireApiCommand(commandName: string, actorSessionToken: string)
 // Auth Exports
 // ============================================================================
 
-export const authenticate = auth.authenticate;
-export const verifySession = auth.verifySession;
+export const authenticate = async (
+  identifier: string,
+  password: string
+) => {
+  // authenticate() allows anonymous access (no session token needed)
+  await requireApiCommand("authenticate", "");
+  return auth.authenticate(identifier, password);
+};
+
+export const verifySession = async (
+  sessionToken: string
+) => {
+  // verifySession() allows anonymous access (just validates the token)
+  await requireApiCommand("verifySession", sessionToken || "");
+  return auth.verifySession(sessionToken);
+};
+
 
 // ============================================================================
 // Cache Exports
@@ -427,16 +454,16 @@ async function invokeApiCommand(functionName: ApiFunctionName, args: unknown[]):
 // HTTP Routes
 // ============================================================================
 
-router.get("/", (req: Request, res: Response) => {
+apiRouter.get("/", (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
-router.get("/root", (req: Request, res: Response) => {
+apiRouter.get("/root", (req: Request, res: Response) => {
   user.printRootCredentials();
   res.sendFile(path.join(__dirname, "../public/root-login.html"));
 });
 
-router.post("/root", async (req: Request, res: Response) => {
+apiRouter.post("/root", async (req: Request, res: Response) => {
   try {
     const { sessionToken } = req.body as { sessionToken?: string };
 
@@ -477,7 +504,7 @@ router.post("/root", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/call", async (req: Request, res: Response) => {
+apiRouter.post("/call", async (req: Request, res: Response) => {
   const { functionName, args } = req.body as ApiCallRequest;
   const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
