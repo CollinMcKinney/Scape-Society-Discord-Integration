@@ -88,13 +88,6 @@ class User {
   }
 
   /**
-   * Hash a password using Argon2 (with automatic salting)
-   */
-  static async hashPassword(password: string): Promise<string> {
-    return hashPassword(password);
-  }
-
-  /**
    * Verify a password against an Argon2 hash
    */
   static async verifyPassword(password: string, hash: string): Promise<boolean> {
@@ -408,7 +401,7 @@ async function createUserInternal(
   role: RoleType = Roles.GUEST,
   password: string | null = null
 ): Promise<User> {
-  const hashedPass = password ? await User.hashPassword(password) : "";
+  const hashedPass = password ? await hashPassword(password) : "";
   
   const user = createUserRecord(
     { osrs_name, disc_name, forum_name },
@@ -637,7 +630,7 @@ async function _updateUserPassword(
   newPassword: string,
   logMessage: string
 ): Promise<boolean> {
-  const hashedPass = await User.hashPassword(newPassword);
+  const hashedPass = await hashPassword(newPassword);
   target.hashedPass = hashedPass;
   await saveStoredUser(target);
   console.log(`${colors.green}[user]${colors.reset} ${logMessage}:`, { userId: target.id });
