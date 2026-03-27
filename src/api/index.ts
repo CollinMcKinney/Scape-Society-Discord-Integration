@@ -32,19 +32,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * Lightweight actor wrapper used by admin auth helpers when a command allows anonymous access.
+ * Lightweight actor wrapper used by API auth helpers when a command allows anonymous access.
  */
-type AdminActor = ActorData | null;
+type ApiActor = ActorData | null;
 
 /**
- * Request body shape accepted by the `/admin/call` endpoint.
+ * Request body shape accepted by the `/api/call` endpoint.
  */
-type AdminCallRequest = { functionName?: unknown; args?: unknown };
+type ApiCallRequest = { functionName?: unknown; args?: unknown };
 
 /**
- * Normalized async handler signature used by the admin dispatcher.
+ * Normalized async handler signature used by the API dispatcher.
  */
-type AdminCommandHandler = (...args: unknown[]) => Promise<unknown>;
+type ApiCommandHandler = (...args: unknown[]) => Promise<unknown>;
 
 const router: Router = express.Router();
 router.use(express.json());
@@ -59,7 +59,7 @@ router.use(express.json());
 async function requireRole(
   actorSessionToken: string,
   minimumRole: RoleType | null
-): Promise<AdminActor> {
+): Promise<ApiActor> {
   if (minimumRole == null) {
     return actorSessionToken ? auth.getVerifiedActor(actorSessionToken) : null;
   }
@@ -68,9 +68,9 @@ async function requireRole(
 }
 
 /**
- * Enforces the configured role requirement for an admin command.
+ * Enforces the configured role requirement for an API command.
  */
-async function requireAdminCommand(commandName: string, actorSessionToken: string): Promise<AdminActor> {
+async function requireApiCommand(commandName: string, actorSessionToken: string): Promise<ApiActor> {
   const minimumRole = await getRequiredRoleForCommand(commandName);
   return requireRole(actorSessionToken, minimumRole);
 }
@@ -87,12 +87,12 @@ export const verifySession = auth.verifySession;
 // ============================================================================
 
 export const saveState = async (actorSessionToken: string) => {
-  await requireAdminCommand("saveState", actorSessionToken);
+  await requireApiCommand("saveState", actorSessionToken);
   return cache.saveState();
 };
 
 export const loadState = async (actorSessionToken: string) => {
-  await requireAdminCommand("loadState", actorSessionToken);
+  await requireApiCommand("loadState", actorSessionToken);
   return cache.loadState();
 };
 
@@ -108,7 +108,7 @@ export const addPacket = (
   data: import("../packet.ts").PacketData = {},
   meta: import("../packet.ts").PacketObject = {}
 ): Promise<boolean> => {
-  const requireAuth = () => requireAdminCommand("addPacket", actorSessionToken);
+  const requireAuth = () => requireApiCommand("addPacket", actorSessionToken);
   return packets.addPacket(requireAuth, actorSessionToken, body, actorDetails, origin, data, meta);
 };
 
@@ -116,7 +116,7 @@ export const getPackets = (
   actorSessionToken: string,
   limit = 50
 ): Promise<import("../packet.ts").SerializedPacket[]> => {
-  const requireAuth = () => requireAdminCommand("getPackets", actorSessionToken);
+  const requireAuth = () => requireApiCommand("getPackets", actorSessionToken);
   return packets.getPackets(requireAuth, limit);
 };
 
@@ -124,7 +124,7 @@ export const deletePacket = (
   actorSessionToken: string,
   packetId: string
 ): Promise<boolean> => {
-  const requireAuth = () => requireAdminCommand("deletePacket", actorSessionToken);
+  const requireAuth = () => requireApiCommand("deletePacket", actorSessionToken);
   return packets.deletePacket(requireAuth, packetId);
 };
 
@@ -133,14 +133,14 @@ export const editPacket = (
   packetId: string,
   newContent: string
 ): Promise<boolean> => {
-  const requireAuth = () => requireAdminCommand("editPacket", actorSessionToken);
+  const requireAuth = () => requireApiCommand("editPacket", actorSessionToken);
   return packets.editPacket(requireAuth, packetId, newContent);
 };
 
 export const getSuppressedPrefixes = (
   actorSessionToken: string
 ): Promise<string[]> => {
-  const requireAuth = () => requireAdminCommand("getSuppressedPrefixes", actorSessionToken);
+  const requireAuth = () => requireApiCommand("getSuppressedPrefixes", actorSessionToken);
   return packets.getSuppressedPrefixes(requireAuth);
 };
 
@@ -148,14 +148,14 @@ export const setSuppressedPrefixes = (
   actorSessionToken: string,
   prefixes: string[]
 ): Promise<string[]> => {
-  const requireAuth = () => requireAdminCommand("setSuppressedPrefixes", actorSessionToken);
+  const requireAuth = () => requireApiCommand("setSuppressedPrefixes", actorSessionToken);
   return packets.setSuppressedPrefixes(requireAuth, prefixes);
 };
 
 export const getCommandRoleRequirements = (
   actorSessionToken: string
 ): Promise<Record<string, import("../permission.ts").CommandRoleRequirementDetails>> => {
-  const requireAuth = () => requireAdminCommand("getCommandRoleRequirements", actorSessionToken);
+  const requireAuth = () => requireApiCommand("getCommandRoleRequirements", actorSessionToken);
   return packets.getCommandRoleRequirements(requireAuth);
 };
 
@@ -164,7 +164,7 @@ export const setCommandRoleRequirement = (
   commandName: string,
   role: string | number | null
 ): Promise<{ commandName: string; roleValue: RoleType | null; roleName: string }> => {
-  const requireAuth = () => requireAdminCommand("setCommandRoleRequirement", actorSessionToken);
+  const requireAuth = () => requireApiCommand("setCommandRoleRequirement", actorSessionToken);
   return packets.setCommandRoleRequirement(requireAuth, commandName, role);
 };
 
@@ -175,7 +175,7 @@ export const setCommandRoleRequirement = (
 export const listFiles = (
   actorSessionToken: string
 ): Promise<Record<import("../files.ts").FileCategory, import("../files.ts").FileMeta[]>> => {
-  const requireAuth = () => requireAdminCommand("listFiles", actorSessionToken);
+  const requireAuth = () => requireApiCommand("listFiles", actorSessionToken);
   return files.listFiles(requireAuth);
 };
 
@@ -186,7 +186,7 @@ export const uploadFile = (
   base64Data: string,
   mimeType?: string
 ): Promise<import("../files.ts").FileMeta> => {
-  const requireAuth = () => requireAdminCommand("uploadFile", actorSessionToken);
+  const requireAuth = () => requireApiCommand("uploadFile", actorSessionToken);
   return files.uploadFile(requireAuth, category, name, base64Data, mimeType);
 };
 
@@ -195,14 +195,14 @@ export const deleteFile = (
   category: import("../files.ts").FileCategory,
   name: string
 ): Promise<boolean> => {
-  const requireAuth = () => requireAdminCommand("deleteFile", actorSessionToken);
+  const requireAuth = () => requireApiCommand("deleteFile", actorSessionToken);
   return files.deleteFile(requireAuth, category, name);
 };
 
 export const getCategories = (
   actorSessionToken: string
 ): Promise<import("../files.ts").FileCategory[]> => {
-  const requireAuth = () => requireAdminCommand("getCategories", actorSessionToken);
+  const requireAuth = () => requireApiCommand("getCategories", actorSessionToken);
   return files.getCategories(requireAuth);
 };
 
@@ -210,7 +210,7 @@ export const createCategory = (
   actorSessionToken: string,
   name: string
 ): Promise<import("../files.ts").FileCategory> => {
-  const requireAuth = () => requireAdminCommand("createCategory", actorSessionToken);
+  const requireAuth = () => requireApiCommand("createCategory", actorSessionToken);
   return files.createCategory(requireAuth, name);
 };
 
@@ -218,14 +218,14 @@ export const deleteCategory = (
   actorSessionToken: string,
   name: string
 ): Promise<boolean> => {
-  const requireAuth = () => requireAdminCommand("deleteCategory", actorSessionToken);
+  const requireAuth = () => requireApiCommand("deleteCategory", actorSessionToken);
   return files.deleteCategory(requireAuth, name);
 };
 
 export const getAllowedMimeTypes = (
   actorSessionToken: string
 ): Promise<string[]> => {
-  const requireAuth = () => requireAdminCommand("getAllowedMimeTypes", actorSessionToken);
+  const requireAuth = () => requireApiCommand("getAllowedMimeTypes", actorSessionToken);
   return files.getAllowedMimeTypes(requireAuth);
 };
 
@@ -233,7 +233,7 @@ export const setAllowedMimeTypes = (
   actorSessionToken: string,
   ...mimeTypes: string[]
 ): Promise<void> => {
-  const requireAuth = () => requireAdminCommand("setAllowedMimeTypes", actorSessionToken);
+  const requireAuth = () => requireApiCommand("setAllowedMimeTypes", actorSessionToken);
   const requireRoot = async () => {
     const actor = await auth.getVerifiedActor(actorSessionToken);
     if (actor.role < Roles.ROOT) {
@@ -254,16 +254,59 @@ export const createUser = async (
   forum_name: string,
   password: string
 ) => {
-  await requireAdminCommand("createUser", actorSessionToken);
+  await requireApiCommand("createUser", actorSessionToken);
   return user.createUser(actorSessionToken, osrs_name, disc_name, forum_name, password);
 };
 
-export const listUsers = user.listUsers;
-export const getUser = user.getUser;
-export const setRole = user.setRole;
-export const deleteUser = user.deleteUser;
-export const changePassword = user.changePassword;
-export const resetPassword = user.resetPassword;
+export const listUsers = async (
+  actorSessionToken: string
+) => {
+  await requireApiCommand("listUsers", actorSessionToken);
+  return user.listUsers(actorSessionToken);
+};
+
+export const getUser = async (
+  actorSessionToken: string,
+  identifier: string
+) => {
+  await requireApiCommand("getUser", actorSessionToken);
+  return user.getUser(actorSessionToken, identifier);
+};
+
+export const setRole = async (
+  actorSessionToken: string,
+  targetIdentifier: string,
+  newRole: string | number
+) => {
+  await requireApiCommand("setRole", actorSessionToken);
+  return user.setRole(actorSessionToken, targetIdentifier, newRole);
+};
+
+export const deleteUser = async (
+  actorSessionToken: string,
+  targetIdentifier: string
+) => {
+  await requireApiCommand("deleteUser", actorSessionToken);
+  return user.deleteUser(actorSessionToken, targetIdentifier);
+};
+
+export const changePassword = async (
+  actorSessionToken: string,
+  targetIdentifier: string,
+  newPassword: string
+) => {
+  await requireApiCommand("changePassword", actorSessionToken);
+  return user.changePassword(actorSessionToken, targetIdentifier, newPassword);
+};
+
+export const resetPassword = async (
+  actorSessionToken: string,
+  targetIdentifier: string,
+  newPassword: string
+) => {
+  await requireApiCommand("resetPassword", actorSessionToken);
+  return user.resetPassword(actorSessionToken, targetIdentifier, newPassword);
+};
 
 // ============================================================================
 // Discord Configuration Exports
@@ -272,7 +315,7 @@ export const resetPassword = user.resetPassword;
 export const getDiscordStatus = (
   actorSessionToken: string
 ): Promise<{ isConnected: boolean; isConfigured: boolean; botTag?: string; channelId?: string }> => {
-  const requireAuth = () => requireAdminCommand("getDiscordStatus", actorSessionToken);
+  const requireAuth = () => requireApiCommand("getDiscordStatus", actorSessionToken);
   return config.getDiscordStatus(requireAuth);
 };
 
@@ -290,21 +333,21 @@ export const updateDiscordConfig = (
   },
   autoConnect?: boolean
 ): Promise<{ success: boolean; error?: string }> => {
-  const requireAuth = () => requireAdminCommand("updateDiscordConfig", actorSessionToken);
+  const requireAuth = () => requireApiCommand("updateDiscordConfig", actorSessionToken);
   return config.updateDiscordConfig(requireAuth, discordConfig, autoConnect);
 };
 
 export const startDiscord = (
   actorSessionToken: string
 ): Promise<{ success: boolean; error?: string }> => {
-  const requireAuth = () => requireAdminCommand("startDiscord", actorSessionToken);
+  const requireAuth = () => requireApiCommand("startDiscord", actorSessionToken);
   return config.startDiscord(requireAuth);
 };
 
 export const stopDiscord = (
   actorSessionToken: string
 ): Promise<void> => {
-  const requireAuth = () => requireAdminCommand("stopDiscord", actorSessionToken);
+  const requireAuth = () => requireApiCommand("stopDiscord", actorSessionToken);
   return config.stopDiscord(requireAuth);
 };
 
@@ -315,7 +358,7 @@ export const stopDiscord = (
 export const getAllLimits = (
   actorSessionToken: string
 ): Promise<Array<object>> => {
-  const requireAuth = () => requireAdminCommand("getAllLimits", actorSessionToken);
+  const requireAuth = () => requireApiCommand("getAllLimits", actorSessionToken);
   return config.getAllLimits(requireAuth);
 };
 
@@ -323,7 +366,7 @@ export const updateLimits = (
   actorSessionToken: string,
   limitsConfig: Record<string, string>
 ): Promise<{ success: boolean; error?: string }> => {
-  const requireAuth = () => requireAdminCommand("updateLimits", actorSessionToken);
+  const requireAuth = () => requireApiCommand("updateLimits", actorSessionToken);
   return config.updateLimits(requireAuth, limitsConfig);
 };
 
@@ -369,14 +412,14 @@ const adminModule = {
   updateLimits,
 };
 
-type AdminApiFunctionName = keyof typeof adminModule;
+type ApiFunctionName = keyof typeof adminModule;
 
-function isAdminApiFunctionName(value: unknown): value is AdminApiFunctionName {
+function isApiFunctionName(value: unknown): value is ApiFunctionName {
   return typeof value === "string" && value in adminModule;
 }
 
-async function invokeAdminCommand(functionName: AdminApiFunctionName, args: unknown[]): Promise<unknown> {
-  const handler = adminModule[functionName] as AdminCommandHandler;
+async function invokeApiCommand(functionName: ApiFunctionName, args: unknown[]): Promise<unknown> {
+  const handler = adminModule[functionName] as ApiCommandHandler;
   return handler(...args);
 }
 
@@ -418,24 +461,24 @@ router.post("/root", async (req: Request, res: Response) => {
       maxAge: 24 * 60 * 60 * 1000
     });
 
-    console.log(`${colors.green}[admin]${colors.reset} ROOT login successful`);
+    console.log(`${colors.green}[api]${colors.reset} ROOT login successful`);
 
     return res.json({
       success: true,
       sessionToken,
       userId,
       username: 'ROOT',
-      redirect: '/admin/'
+      redirect: '/api/'
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to login";
-    console.error(`${colors.red}[admin]${colors.reset} ROOT login failed:`, message);
+    console.error(`${colors.red}[api]${colors.reset} ROOT login failed:`, message);
     return res.status(500).json({ error: message });
   }
 });
 
 router.post("/call", async (req: Request, res: Response) => {
-  const { functionName, args } = req.body as AdminCallRequest;
+  const { functionName, args } = req.body as ApiCallRequest;
   const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
   const sessionToken = Array.isArray(args) && args.length > 0 && typeof args[0] === 'string' && args[0].length > 32
@@ -500,23 +543,23 @@ router.post("/call", async (req: Request, res: Response) => {
   const timeStr = now.toTimeString().split(' ')[0];
 
   console.log(
-    `${colors.gray}[admin/call]${colors.reset} ` +
+    `${colors.gray}[api/call]${colors.reset} ` +
     `${colors.blue}${timeStr}${colors.reset} ` +
     `${colors.cyan}${userIdentifier}${colors.reset} ` +
     `${colors.green}${functionName}${colors.reset}(${colors.yellow}${argsStr}${colors.reset})`
   );
 
-  if (!isAdminApiFunctionName(functionName)) {
-    console.error(`${colors.red}Error:${colors.reset} [admin/call] Function not allowed:`, functionName);
+  if (!isApiFunctionName(functionName)) {
+    console.error(`${colors.red}Error:${colors.reset} [api/call] Function not allowed:`, functionName);
     return res.status(400).json({ error: "Function not allowed" });
   }
 
   try {
-    const result = await invokeAdminCommand(functionName, parsedArgs);
+    const result = await invokeApiCommand(functionName, parsedArgs);
     return res.json({ result });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown admin error";
-    console.error(`${colors.red}Error:${colors.reset} [admin/call]`, message);
+    const message = err instanceof Error ? err.message : "Unknown API error";
+    console.error(`${colors.red}Error:${colors.reset} [api/call]`, message);
     return res.status(500).json({ error: message });
   }
 });
