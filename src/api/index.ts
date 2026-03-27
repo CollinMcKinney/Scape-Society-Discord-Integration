@@ -46,7 +46,7 @@ type ApiCallRequest = { functionName?: unknown; args?: unknown };
  */
 type ApiCommandHandler = (...args: unknown[]) => Promise<unknown>;
 
-const router: Router = express.Router();
+const apiRouter: Router = express.Router();
 router.use(express.json());
 
 // ============================================================================
@@ -564,4 +564,4 @@ router.post("/call", async (req: Request, res: Response) => {
   }
 });
 
-export default router;
+export default apiRouter;
