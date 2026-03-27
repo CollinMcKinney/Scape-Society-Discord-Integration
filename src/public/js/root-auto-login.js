@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Call the login API directly
-    fetch('/admin/root', {
+    fetch('/dashboard/root', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionToken })

@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn.textContent = 'Authenticating...';
 
     try {
-      const response = await fetch('/admin/root', {
+      const response = await fetch('/dashboard/root', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionToken })

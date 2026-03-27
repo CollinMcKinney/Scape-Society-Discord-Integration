@@ -115,7 +115,7 @@ class User {
  */
 export function printRootCredentials(): void {
   const sessionToken = rootCredentials?.sessionToken || process.env.ROOT_SESSION_TOKEN || "";
-  const loginUrl = `https://localhost/admin/root?sessionToken=${sessionToken}`;
+  const loginUrl = `https://localhost/dashboard/root?sessionToken=${sessionToken}`;
 
   console.log("");
   console.log(`${colors.gray}${"─".repeat(60)}${colors.reset}`);
