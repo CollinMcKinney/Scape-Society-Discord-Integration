@@ -1,7 +1,6 @@
 import crypto from "crypto";
 
-import * as auth from "./auth.ts";
-import { type ActorData, type SessionData, SESSION_TTL_HOURS, updateSessionTTL, hashPassword, verifyPassword } from "./auth.ts";
+import { type ActorData, type SessionData, SESSION_TTL_HOURS, updateSessionTTL } from "./auth.ts";
 import * as cache from "./cache.ts";
 import { Roles, type RoleType } from "./permission.ts";
 
@@ -540,18 +539,13 @@ async function getUser(
 }
 
 /**
- * Updates a target user's role when the caller outranks both the current and requested roles.
- * @param actorId - The user id of the actor requesting the role change.
- * @param actorSessionToken - The session token used to authorize the actor.
- * @param targetId - The stored user id whose role should be updated.
- * @param newRole - The requested role value, supplied as either a numeric role or role name.
+ * Updates a target user's role.
  */
 async function setRole(
   actorSessionToken: string,
   targetId: string,
   newRole: string | number
 ): Promise<boolean> {
-  const actor = await auth.getVerifiedActor(actorSessionToken);
   const target = await loadStoredUser(targetId);
   const parsedRole = parseRole(newRole);
   if (!target) return false;
@@ -559,37 +553,9 @@ async function setRole(
     throw new Error("Invalid role");
   }
 
-  console.log(`${colors.cyan}[user]${colors.reset} [setRole] Permission check:`, {
-    actorRole: actor.role,
-    actorName: actor.osrs_name,
-    targetRole: target.role,
-    targetName: target.osrs_name,
-    newRole: parsedRole
-  });
-
-  // Only Moderator+ can change roles
-  if (actor.role < Roles.MODERATOR) {
-    throw new Error("Only Moderator+ can change user roles");
-  }
-
   // Cannot change ROOT
   if (target.role === Roles.ROOT) {
     throw new Error("Cannot change ROOT user's role");
-  }
-
-  // Cannot change own role to escalate privileges
-  if (actor.id === targetId) {
-    throw new Error("Cannot change your own role");
-  }
-
-  // Cannot promote someone above your own rank
-  if (parsedRole > actor.role) {
-    throw new Error("Cannot promote user above your own rank");
-  }
-
-  // Cannot promote someone to a rank higher than yours
-  if (target.role < parsedRole && parsedRole > actor.role) {
-    throw new Error("Cannot promote user above your own rank");
   }
 
   target.role = parsedRole;
@@ -616,23 +582,12 @@ function parseRole(role: string | number): RoleType | null {
 }
 
 /**
- * Deletes a user account (ROOT only).
- * @param actorId - The user id of the actor requesting the deletion.
- * @param actorSessionToken - The session token used to authorize the actor.
- * @param targetId - The stored user id to delete.
- * @returns True if the user was deleted.
+ * Deletes a user account.
  */
 async function deleteUser(
   actorSessionToken: string,
   targetId: string
 ): Promise<boolean> {
-  const actor = await auth.getVerifiedActor(actorSessionToken);
-
-  // Only ROOT can delete users
-  if (actor.role !== Roles.ROOT) {
-    throw new Error("Only ROOT can delete users");
-  }
-
   // Cannot delete ROOT
   const target = await loadStoredUser(targetId);
   if (!target) return false;
@@ -640,21 +595,9 @@ async function deleteUser(
     throw new Error("Cannot delete ROOT user");
   }
 
-  // Delete reverse indexes
-  if (target.osrs_name) {
-    await cache.del(`user:byOsrs:${target.osrs_name.toLowerCase()}`);
-  }
-  if (target.disc_name) {
-    await cache.del(`user:byDisc:${target.disc_name.toLowerCase()}`);
-  }
-  if (target.forum_name) {
-    await cache.del(`user:byForum:${target.forum_name.toLowerCase()}`);
-  }
-
-  // Delete user record
   await cache.del(`user:${targetId}`);
   await cache.sRem("users", targetId);
-
+  await removeUserIndexes(target);
   return true;
 }
 
@@ -703,61 +646,36 @@ async function _updateUserPassword(
 
 /**
  * Changes a user's password.
- * @param actorSessionToken - The session token of the user requesting the change.
- * @param targetIdentifier - The user ID or username whose password should be changed (can be own ID).
- * @param newPassword - The new password to hash and store.
  */
 async function changePassword(
   actorSessionToken: string,
   targetIdentifier: string,
   newPassword: string
 ): Promise<boolean> {
-  const actor = await auth.getVerifiedActor(actorSessionToken);
-
   // Look up target user
   const target = await findUserByIdentifier(targetIdentifier);
   if (!target) {
     throw new Error("User not found");
-  }
-
-  // Users can only change their own password, unless they're ROOT
-  if (actor.id !== target.id && actor.role !== Roles.ROOT) {
-    throw new Error("Can only change your own password");
-  }
-
-  // Cannot change ROOT password unless you're ROOT
-  if (target.role === Roles.ROOT && actor.role !== Roles.ROOT) {
-    throw new Error("Cannot change ROOT password");
   }
 
   return _updateUserPassword(target, newPassword, "Password changed");
 }
 
 /**
- * Resets a user's password (ROOT only).
- * @param actorSessionToken - The session token of the ROOT user requesting the reset.
- * @param targetIdentifier - The user ID or username whose password should be reset.
- * @param newPassword - The new password to hash and store.
+ * Resets a user's password.
  */
 async function resetPassword(
   actorSessionToken: string,
   targetIdentifier: string,
   newPassword: string
 ): Promise<boolean> {
-  const actor = await auth.getVerifiedActor(actorSessionToken);
-
-  // Only ROOT can reset passwords
-  if (actor.role !== Roles.ROOT) {
-    throw new Error("Only ROOT can reset passwords");
-  }
-
   // Look up target user
   const target = await findUserByIdentifier(targetIdentifier);
   if (!target) {
     throw new Error("User not found");
   }
 
-  return _updateUserPassword(target, newPassword, "Password reset by ROOT");
+  return _updateUserPassword(target, newPassword, "Password reset");
 }
 
 export {
