@@ -104,7 +104,7 @@ export const addPacket = (
   actorSessionToken: string,
   body: string,
   actorDetails: Partial<import("../packet.ts").ActorInfo> = {},
-  origin = "admin",
+  origin = "Concord",
   data: import("../packet.ts").PacketData = {},
   meta: import("../packet.ts").PacketObject = {}
 ): Promise<boolean> => {
@@ -374,7 +374,7 @@ export const updateLimits = (
 // Command Dispatcher
 // ============================================================================
 
-const adminModule = {
+const apiModule = {
   authenticate,
   verifySession,
   saveState,
@@ -412,14 +412,14 @@ const adminModule = {
   updateLimits,
 };
 
-type ApiFunctionName = keyof typeof adminModule;
+type ApiFunctionName = keyof typeof apiModule;
 
 function isApiFunctionName(value: unknown): value is ApiFunctionName {
-  return typeof value === "string" && value in adminModule;
+  return typeof value === "string" && value in apiModule;
 }
 
 async function invokeApiCommand(functionName: ApiFunctionName, args: unknown[]): Promise<unknown> {
-  const handler = adminModule[functionName] as ApiCommandHandler;
+  const handler = apiModule[functionName] as ApiCommandHandler;
   return handler(...args);
 }
 
@@ -468,7 +468,7 @@ router.post("/root", async (req: Request, res: Response) => {
       sessionToken,
       userId,
       username: 'ROOT',
-      redirect: '/api/'
+      redirect: '/dashboard/'
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to login";

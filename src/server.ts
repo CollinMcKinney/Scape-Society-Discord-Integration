@@ -58,11 +58,11 @@ app.use(helmet({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Serve static files from public folder (but not index.html - that's handled by /admin route)
+// Serve static files from public folder (but not index.html - that's handled by /dashboard route)
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
-// Example admin route to broadcast a message to all RuneLite clients
-app.use("/admin", adminRouter);
+// Dashboard router - UI for all authenticated users (not just admins)
+app.use("/dashboard", adminRouter);
 app.use("/files", filesRouter);
 app.use("/modals", express.static(path.join(__dirname, "public", "modals")));
 
