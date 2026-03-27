@@ -131,66 +131,13 @@ export const setAllowedMimeTypes = apiCommand("setAllowedMimeTypes", files.setAl
 // User Management Exports
 // ============================================================================
 
-export const createUser = async (
-  actorSessionToken: string,
-  osrs_name: string,
-  disc_name: string,
-  forum_name: string,
-  password: string
-) => {
-  await checkCommandAccess("createUser", actorSessionToken);
-  return user.createUser(actorSessionToken, osrs_name, disc_name, forum_name, password);
-};
-
-export const listUsers = async (
-  actorSessionToken: string
-) => {
-  await checkCommandAccess("listUsers", actorSessionToken);
-  return user.listUsers(actorSessionToken);
-};
-
-export const getUser = async (
-  actorSessionToken: string,
-  identifier: string
-) => {
-  await checkCommandAccess("getUser", actorSessionToken);
-  return user.getUser(actorSessionToken, identifier);
-};
-
-export const setRole = async (
-  actorSessionToken: string,
-  targetIdentifier: string,
-  newRole: string | number
-) => {
-  await checkCommandAccess("setRole", actorSessionToken);
-  return user.setRole(actorSessionToken, targetIdentifier, newRole);
-};
-
-export const deleteUser = async (
-  actorSessionToken: string,
-  targetIdentifier: string
-) => {
-  await checkCommandAccess("deleteUser", actorSessionToken);
-  return user.deleteUser(actorSessionToken, targetIdentifier);
-};
-
-export const changePassword = async (
-  actorSessionToken: string,
-  targetIdentifier: string,
-  newPassword: string
-) => {
-  await checkCommandAccess("changePassword", actorSessionToken);
-  return user.changePassword(actorSessionToken, targetIdentifier, newPassword);
-};
-
-export const resetPassword = async (
-  actorSessionToken: string,
-  targetIdentifier: string,
-  newPassword: string
-) => {
-  await checkCommandAccess("resetPassword", actorSessionToken);
-  return user.resetPassword(actorSessionToken, targetIdentifier, newPassword);
-};
+export const createUser = apiCommand("createUser", user.createUser);
+export const listUsers = apiCommand("listUsers", user.listUsers);
+export const getUser = apiCommand("getUser", user.getUser);
+export const setRole = apiCommand("setRole", user.setRole);
+export const deleteUser = apiCommand("deleteUser", user.deleteUser);
+export const changePassword = apiCommand("changePassword", user.changePassword);
+export const resetPassword = apiCommand("resetPassword", user.resetPassword);
 
 // ============================================================================
 // Discord Configuration Exports
