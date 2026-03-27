@@ -50,6 +50,9 @@ const MIN_INTERVAL_MS = 5000;
 const MAX_INTERVAL_MS = 5 * 60 * 1000;
 const SIZE_THRESHOLD_MB = 50;
 
+// Track auto-save timer for cleanup
+let autoSaveTimerId: NodeJS.Timeout | null = null;
+
 // Ensure backup directory exists
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
@@ -333,10 +336,21 @@ async function startAutoSaveDynamic(): Promise<void> {
     }
 
     interval = getDynamicInterval();
-    setTimeout(saveAndSchedule, interval);
+    autoSaveTimerId = setTimeout(saveAndSchedule, interval);
   };
 
-  setTimeout(saveAndSchedule, interval);
+  autoSaveTimerId = setTimeout(saveAndSchedule, interval);
+}
+
+/**
+ * Stops the auto-save loop and clears any pending timers.
+ */
+function stopAutoSave(): void {
+  if (autoSaveTimerId) {
+    clearTimeout(autoSaveTimerId);
+    autoSaveTimerId = null;
+    console.log(`${colors.green}[cache]${colors.reset} Auto-save stopped`);
+  }
 }
 
 export {
@@ -353,5 +367,6 @@ export {
   del,
   saveState,
   loadState,
-  startAutoSaveDynamic
+  startAutoSaveDynamic,
+  stopAutoSave
 };

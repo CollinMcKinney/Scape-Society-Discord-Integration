@@ -42,24 +42,43 @@ function isRunningInContainer() {
 
 function runInContainer() {
   try {
-    // Enable corepack.
+    // Enable corepack for yarn management.
     execSync('corepack enable', { stdio: 'inherit' });
     console.log('[bootstrap] corepack enabled...');
 
-    // Set Yarn 4.x version.
-    execSync('yarn set version latest', { stdio: 'inherit' });
-    console.log('[bootstrap] Set latest Yarn version...');
-
-    // Install dependencies with Yarn PnP.
+    // Install dependencies with Yarn PnP (generates yarn.lock, .pnp.cjs, etc.)
     execSync('yarn install', { stdio: 'inherit' });
     console.log('[bootstrap] Container dependencies installed...');
 
-    // Start nodemon with server.ts (PnP-aware.)
-    execSync('yarn nodemon --legacy-watch /app/src/server.ts', {
+    // Start nodemon with server.ts (PnP-aware) using spawn for proper signal handling
+    console.log('[bootstrap] Starting nodemon...');
+    const nodemon = spawn('yarn', ['nodemon', '--legacy-watch', '/app/src/server.ts'], {
       stdio: 'inherit',
       env: { ...process.env, FORCE_COLOR: '1' }
     });
-    console.log('[bootstrap] nodemon now watching for changes...');
+
+    let shuttingDown = false;
+
+    // Forward signals to nodemon with force-kill timeout
+    function shutdown(signal) {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      console.log(`[bootstrap] Received ${signal}, stopping nodemon...`);
+      nodemon.kill('SIGTERM');
+      
+      // Force kill after 3 seconds if nodemon doesn't exit
+      setTimeout(() => {
+        console.log('[bootstrap] Forcing nodemon exit...');
+        nodemon.kill('SIGKILL');
+      }, 3000);
+    }
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+
+    nodemon.on('close', (code) => {
+      process.exit(code ?? 0);
+    });
 
   } catch (err) {
     console.error('[bootstrap] Error starting services:', err);

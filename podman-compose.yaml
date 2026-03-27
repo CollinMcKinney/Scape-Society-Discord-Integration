@@ -20,10 +20,12 @@ services:
     depends_on:
       - redis
     volumes:
-      # Named volumes (performance + isolation)
-      - concord-yarn:/app/.yarn:Z
-
-      # Bind mounts (you edit on host)
+      # Bind mounts (you edit on host + Zero Install with container install support)
+      - ./.pnp.cjs:/app/.pnp.cjs:Z
+      - ./.pnp.loader.mjs:/app/.pnp.loader.mjs:Z
+      - ./.yarn:/app/.yarn:Z
+      - ./.yarnrc.yml:/app/.yarnrc.yml:ro,Z
+      - ./yarn.lock:/app/yarn.lock:Z
       - ./data:/app/data:Z
       - ./src:/app/src:Z
       - ./bootstrap.js:/app/bootstrap.js:Z
@@ -48,6 +50,5 @@ services:
       - concord 
     
 volumes:
-  concord-yarn: {}
   caddy-data: {}
   caddy-config: {}

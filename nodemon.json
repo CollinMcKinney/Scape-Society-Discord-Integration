@@ -9,5 +9,6 @@
     "data/**"
   ],
   "exec": "yarn node --require @swc-node/register ./src/server.ts",
-  "legacyWatch": true
+  "legacyWatch": true,
+  "signal": "SIGINT"
 }

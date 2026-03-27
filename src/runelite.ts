@@ -51,6 +51,11 @@ interface ExtendedWebSocket extends WebSocket {
 const clients = new Set<ExtendedWebSocket>();
 
 /**
+ * Reference to the WebSocket server for cleanup.
+ */
+let webSocketServer: WebSocketServer | null = null;
+
+/**
  * Delay in milliseconds before initializing a guest session for new connections.
  */
 const GUEST_INIT_DELAY_MS = 500;
@@ -105,7 +110,7 @@ async function handleIncomingPacket(packet: Packet): Promise<boolean> {
  * @returns The created WebSocket server instance.
  */
 function attachToServer(httpServer: http.Server): WebSocketServer {
-  const webSocketServer = new WebSocketServer({ 
+  webSocketServer = new WebSocketServer({
     server: httpServer,
     maxPayload: WS_MAX_PAYLOAD_SIZE
   });
@@ -472,10 +477,50 @@ async function isSuppressedRuneliteMessage(packet: Packet): Promise<boolean> {
   return false;
 }
 
+/**
+ * Closes all WebSocket clients and the WebSocket server.
+ */
+function closeWebSocketServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (!webSocketServer) {
+      resolve();
+      return;
+    }
+
+    console.log(`${colors.yellow}[runelite]${colors.reset} Closing ${clients.size} WebSocket client(s)...`);
+
+    // Close all client connections
+    for (const client of clients) {
+      try {
+        client.close(1001, 'Server shutting down');
+      } catch (err) {
+        // Ignore errors during close
+      }
+    }
+
+    // Close the WebSocket server
+    webSocketServer.close(() => {
+      console.log(`${colors.green}[runelite]${colors.reset} WebSocket server closed`);
+      webSocketServer = null;
+      clients.clear();
+      resolve();
+    });
+
+    // Force close after 2 seconds
+    setTimeout(() => {
+      console.log(`${colors.yellow}[runelite]${colors.reset} Forcing WebSocket server close`);
+      webSocketServer = null;
+      clients.clear();
+      resolve();
+    }, 2000);
+  });
+}
+
 export {
   handleIncomingPacket,
   attachToServer,
   broadcast,
   broadcastSuppressedPrefixesUpdate,
-  broadcastDiscordInviteUrlUpdate
+  broadcastDiscordInviteUrlUpdate,
+  closeWebSocketServer
 };

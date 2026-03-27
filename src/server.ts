@@ -7,11 +7,11 @@ import express from "express";
 import helmet from "helmet";
 
 import { initDiscord } from "./discord.ts";
-import { initStorage, saveState, loadState, startAutoSaveDynamic } from "./cache.ts";
+import { initStorage, saveState, loadState, startAutoSaveDynamic, client, stopAutoSave } from "./cache.ts";
 import { initFiles, updateUploadSizeLimit } from "./files.ts";
 import filesRouter from "./filesRouter.ts";
 import { Packet, type SerializedPacket } from "./packet.ts";
-import { attachToServer, broadcast } from "./runelite.ts";
+import { attachToServer, broadcast, closeWebSocketServer } from "./runelite.ts";
 import { initializeRoot, updateSessionTTL } from "./user.ts";
 import { initLimits } from "./limits.ts";
 import adminRouter from "./admin.ts";
@@ -110,3 +110,57 @@ async function start(): Promise<void> {
 }
 
 start();
+
+// Graceful shutdown - closes all connections for fast container stops
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`${colors.yellow}[server]${colors.reset} Received ${signal}, shutting down gracefully...`);
+
+  try {
+    // Stop auto-save timer
+    stopAutoSave();
+
+    // Stop accepting new connections
+    server.close(() => {
+      console.log(`${colors.green}[server]${colors.reset} HTTP server closed`);
+    });
+
+    // Close WebSocket server and all clients
+    await closeWebSocketServer();
+
+    // Close Discord connections
+    const { stopDiscord } = await import('./discord.ts');
+    await stopDiscord();
+
+    // Close Redis connection
+    if (client && client.isOpen) {
+      console.log(`${colors.cyan}[server]${colors.reset} Saving state and closing Redis...`);
+      await saveState();
+      await client.quit();
+      console.log(`${colors.green}[server]${colors.reset} Redis connection closed`);
+    }
+
+    console.log(`${colors.green}[server]${colors.reset} Graceful shutdown complete`);
+    process.exit(0);
+  } catch (err) {
+    console.error(`${colors.red}[server]${colors.reset} Shutdown error:`, err);
+    process.exit(1);
+  }
+}
+
+// Nodemon sends SIGINT to the Node process
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (err) => {
+  console.error(`${colors.red}[server]${colors.reset} Uncaught exception:`, err);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`${colors.red}[server]${colors.reset} Unhandled rejection:`, reason);
+});
