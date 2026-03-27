@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-import { type ActorData, type SessionData, SESSION_TTL_HOURS, updateSessionTTL, hashSessionToken, verifySession, hashPassword, verifyPassword } from "./auth.ts";
+import { type ActorData, type SessionData, SESSION_TTL_HOURS, updateSessionTTL, hashSessionToken, verifySession, hashPassword } from "./auth.ts";
 import * as cache from "./cache.ts";
 import { Roles, type RoleType } from "./permission.ts";
 
@@ -85,20 +85,6 @@ class User {
     const forum = this.forum_name?.trim();
 
     return osrs || disc || forum || this.id.slice(0, 12);
-  }
-
-  /**
-   * Verify a password against an Argon2 hash
-   */
-  static async verifyPassword(password: string, hash: string): Promise<boolean> {
-    return verifyPassword(password, hash);
-  }
-
-  /**
-   * Hash a token using SHA-256 (for session tokens, etc.)
-   */
-  static hashToken(token: string): string {
-    return crypto.createHash("sha256").update(token).digest("hex");
   }
 }
 
@@ -363,7 +349,7 @@ async function initializeRoot(): Promise<User | null> {
         forum_name: "ROOT",
       },
       Roles.ROOT,
-      User.hashToken(crypto.randomBytes(32).toString("hex")),
+      hashSessionToken(crypto.randomBytes(32).toString("hex")),
       new Date()
     );
 
