@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-import { type ActorData, type SessionData, SESSION_TTL_HOURS, updateSessionTTL, hashSessionToken, verifySession } from "./auth.ts";
+import { type ActorData, type SessionData, SESSION_TTL_HOURS, updateSessionTTL, hashSessionToken, verifySession, hashPassword, verifyPassword } from "./auth.ts";
 import * as cache from "./cache.ts";
 import { Roles, type RoleType } from "./permission.ts";
 
