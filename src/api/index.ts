@@ -54,37 +54,23 @@ apiRouter.use(express.json());
 // ============================================================================
 
 /**
- * Ensures the caller meets the provided role requirement.
- */
-async function requireRole(
-  actorSessionToken: string,
-  minimumRole: RoleType | null
-): Promise<ApiActor> {
-  if (minimumRole == null) {
-    return actorSessionToken ? auth.getVerifiedActor(actorSessionToken) : null;
-  }
-
-  return auth.requireRole(actorSessionToken, minimumRole);
-}
-
-/**
  * Checks if the caller has access to execute an API command.
  * For commands that allow anonymous access, pass an empty session token.
  */
 async function checkCommandAccess(commandName: string, actorSessionToken: string): Promise<ApiActor> {
   const minimumRole = await getRequiredRoleForCommand(commandName);
-  
+
   // If no role required, allow anonymous access
   if (minimumRole == null) {
     return null;
   }
-  
+
   // If session token is empty/null, user can't meet role requirement
   if (!actorSessionToken) {
     throw new Error("Authentication required");
   }
-  
-  return requireRole(actorSessionToken, minimumRole);
+
+  return auth.requireRole(actorSessionToken, minimumRole);
 }
 
 // ============================================================================
