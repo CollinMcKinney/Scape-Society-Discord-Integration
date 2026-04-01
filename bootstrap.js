@@ -50,13 +50,20 @@ function runInContainer() {
     execSync('yarn install', { stdio: 'inherit' });
     console.log('[bootstrap] Container dependencies installed...');
 
+    // Run Yarn audit inside the container on every boot (non-fatal).
+    try {
+      execSync('yarn npm audit -R', { stdio: 'inherit' });
+    } catch (auditErr) {
+      console.warn('[bootstrap] yarn audit failed (continuing):', auditErr?.message ?? auditErr);
+    }
+
     // Start nodemon with server.ts (PnP-aware) using spawn for proper signal handling
-    console.log('[bootstrap] Starting nodemon...');
     const nodemon = spawn('yarn', ['nodemon', '--legacy-watch', '/app/src/server.ts'], {
       stdio: 'inherit',
       env: { ...process.env, FORCE_COLOR: '1' }
     });
-
+    console.log('[bootstrap] Nodemon started...');
+    
     let shuttingDown = false;
 
     // Forward signals to nodemon with force-kill timeout
