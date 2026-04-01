@@ -91,13 +91,6 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@discordjs/collection", [\
-      ["npm:1.5.3", {\
-        "packageLocation": "./.yarn/cache/@discordjs-collection-npm-1.5.3-ea9e0ca74b-54338e005e.zip/node_modules/@discordjs/collection/",\
-        "packageDependencies": [\
-          ["@discordjs/collection", "npm:1.5.3"]\
-        ],\
-        "linkType": "HARD"\
-      }],\
       ["npm:2.1.1", {\
         "packageLocation": "./.yarn/cache/@discordjs-collection-npm-2.1.1-fcbdb0bac5-7bbb007271.zip/node_modules/@discordjs/collection/",\
         "packageDependencies": [\
@@ -1570,7 +1563,7 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@xhmikosr/bin-check", "npm:7.1.0"],\
           ["execa", "npm:5.1.1"],\
-          ["isexe", "npm:2.0.0"]\
+          ["isexe", "npm:4.0.0"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -2261,7 +2254,7 @@ const RAW_RUNTIME_STATE =
           ["cross-spawn", "npm:7.0.6"],\
           ["path-key", "npm:3.1.1"],\
           ["shebang-command", "npm:2.0.0"],\
-          ["which", "npm:2.0.2"]\
+          ["which", "npm:6.0.1"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -2363,7 +2356,7 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/discord.js-npm-14.25.1-8185a56e3d-7510525acc.zip/node_modules/discord.js/",\
         "packageDependencies": [\
           ["@discordjs/builders", "npm:1.14.0"],\
-          ["@discordjs/collection", "npm:1.5.3"],\
+          ["@discordjs/collection", "npm:2.1.1"],\
           ["@discordjs/formatters", "npm:0.6.2"],\
           ["@discordjs/rest", "npm:2.6.1"],\
           ["@discordjs/util", "npm:1.2.0"],\
@@ -3253,13 +3246,6 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["isexe", [\
-      ["npm:2.0.0", {\
-        "packageLocation": "./.yarn/cache/isexe-npm-2.0.0-b58870bd2e-228cfa503f.zip/node_modules/isexe/",\
-        "packageDependencies": [\
-          ["isexe", "npm:2.0.0"]\
-        ],\
-        "linkType": "HARD"\
-      }],\
       ["npm:4.0.0", {\
         "packageLocation": "./.yarn/cache/isexe-npm-4.0.0-588229ad74-5884815115.zip/node_modules/isexe/",\
         "packageDependencies": [\
@@ -3473,14 +3459,6 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["minipass", [\
-      ["npm:3.3.6", {\
-        "packageLocation": "./.yarn/cache/minipass-npm-3.3.6-b8d93a945b-a114746943.zip/node_modules/minipass/",\
-        "packageDependencies": [\
-          ["minipass", "npm:3.3.6"],\
-          ["yallist", "npm:5.0.0"]\
-        ],\
-        "linkType": "HARD"\
-      }],\
       ["npm:7.1.3", {\
         "packageLocation": "./.yarn/cache/minipass-npm-7.1.3-b73a16498d-539da88dac.zip/node_modules/minipass/",\
         "packageDependencies": [\
@@ -3516,7 +3494,7 @@ const RAW_RUNTIME_STATE =
       ["npm:1.0.7", {\
         "packageLocation": "./.yarn/cache/minipass-flush-npm-1.0.7-d0ad4a0c15-960915c02a.zip/node_modules/minipass-flush/",\
         "packageDependencies": [\
-          ["minipass", "npm:3.3.6"],\
+          ["minipass", "npm:7.1.3"],\
           ["minipass-flush", "npm:1.0.7"]\
         ],\
         "linkType": "HARD"\
@@ -3526,7 +3504,7 @@ const RAW_RUNTIME_STATE =
       ["npm:1.2.4", {\
         "packageLocation": "./.yarn/cache/minipass-pipeline-npm-1.2.4-5924cb077f-cbda57cea2.zip/node_modules/minipass-pipeline/",\
         "packageDependencies": [\
-          ["minipass", "npm:3.3.6"],\
+          ["minipass", "npm:7.1.3"],\
           ["minipass-pipeline", "npm:1.2.4"]\
         ],\
         "linkType": "HARD"\
@@ -4281,13 +4259,6 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["source-map", [\
-      ["npm:0.6.1", {\
-        "packageLocation": "./.yarn/cache/source-map-npm-0.6.1-1a3621db16-ab55398007.zip/node_modules/source-map/",\
-        "packageDependencies": [\
-          ["source-map", "npm:0.6.1"]\
-        ],\
-        "linkType": "HARD"\
-      }],\
       ["npm:0.7.6", {\
         "packageLocation": "./.yarn/cache/source-map-npm-0.7.6-a3854be193-59f6f05538.zip/node_modules/source-map/",\
         "packageDependencies": [\
@@ -4301,7 +4272,7 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/source-map-support-npm-0.5.21-09ca99e250-9ee09942f4.zip/node_modules/source-map-support/",\
         "packageDependencies": [\
           ["buffer-from", "npm:1.1.2"],\
-          ["source-map", "npm:0.6.1"],\
+          ["source-map", "npm:0.7.6"],\
           ["source-map-support", "npm:0.5.21"]\
         ],\
         "linkType": "HARD"\
@@ -4665,14 +4636,6 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["which", [\
-      ["npm:2.0.2", {\
-        "packageLocation": "./.yarn/cache/which-npm-2.0.2-320ddf72f7-66522872a7.zip/node_modules/which/",\
-        "packageDependencies": [\
-          ["isexe", "npm:2.0.0"],\
-          ["which", "npm:2.0.2"]\
-        ],\
-        "linkType": "HARD"\
-      }],\
       ["npm:6.0.1", {\
         "packageLocation": "./.yarn/cache/which-npm-6.0.1-afc3b2db90-7e710e54ea.zip/node_modules/which/",\
         "packageDependencies": [\
