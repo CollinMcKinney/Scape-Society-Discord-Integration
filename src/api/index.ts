@@ -560,10 +560,10 @@ apiRouter.get("/files/favicon", async (_req: Request, res: Response): Promise<vo
     if (favicon) {
       res.json(favicon);
     } else {
-      res.json({ category: "branding", name: "favicon.png" });
+      res.json({ category: "concord", name: "concord.png" });
     }
   } catch {
-    res.json({ category: "branding", name: "favicon.png" });
+    res.json({ category: "concord", name: "concord.png" });
   }
 });
 

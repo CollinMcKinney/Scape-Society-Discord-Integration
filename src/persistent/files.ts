@@ -98,9 +98,10 @@ const CATEGORIES_KEY = "files:categories";
  * Default categories that are always available
  */
 const DEFAULT_CATEGORIES: FileCategory[] = [
-  "clan_icons", 
-  "chat_badges",
-  "branding"
+  'concord',
+  'clan_logos',
+  "clan_icons",
+  "chat_badges"
 ];
 
 /**

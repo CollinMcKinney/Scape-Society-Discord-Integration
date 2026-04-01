@@ -95,9 +95,9 @@ app.get("/files/favicon", async (req, res) => {
   try {
     const { getFavicon } = await import("./persistent/files.ts");
     const favicon = await getFavicon();
-    res.json(favicon || { category: "branding", name: "favicon.png" });
+    res.json(favicon || { category: "concord", name: "concord.png" });
   } catch {
-    res.json({ category: "branding", name: "favicon.png" });
+    res.json({ category: "concord", name: "concord.png" });
   }
 });
 

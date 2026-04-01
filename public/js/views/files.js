@@ -16,7 +16,8 @@ async function loadFilesView() {
   state.filesCurrentTab = state.filesCurrentTab || 'all';
 
   const categories = await apiCall('getCategories');
-  state.filesCategories = categories || ['clan_icons', 'chat_badges', 'branding'];
+  // TODO: get these from files.ts DEFAULT_CATEGORIES somehow.
+  state.filesCategories = categories || ['concord', 'clan_logos', 'clan_icons', 'chat_badges'];
 
   try {
     const result = await apiCall('getAllowedMimeTypes');
@@ -25,7 +26,7 @@ async function loadFilesView() {
     state.allowedMimeTypes = PREDEFINED_MIME_TYPES.map(t => t.type);
   }
 
-  const sortedCategories = ['branding', ...state.filesCategories.filter(c => c !== 'branding').sort()];
+  const sortedCategories = ['concord', ...state.filesCategories.filter(c => c !== 'concord').sort()];
   state.filesCategories = sortedCategories;
 
   await loadView('files', renderFilesView);
@@ -63,7 +64,7 @@ async function renderFilesView() {
     state.customMimeTypes = [];
   }
 
-  const sortedCategories = ['branding', ...state.filesCategories.filter(c => c !== 'branding').sort()];
+  const sortedCategories = ['concord', ...state.filesCategories.filter(c => c !== 'concord').sort()];
   state.filesCategories = sortedCategories;
 
   // Build list: predefined types (toggle only) + custom types (toggle + delete)
@@ -103,6 +104,7 @@ function renderFilesMimeTypes(allMimeTypes) {
       const dotShadow = isEnabled ? '0 0 12px rgba(141, 240, 181, 0.8)' : '0 0 12px rgba(255, 133, 133, 0.8)';
       
       // Custom types have delete button, all types are toggleable by clicking anywhere
+      // TODO: don't embed stringified HTML in the javascript.
       return `
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.1); color: var(--text); font-size: 0.8rem; cursor: pointer;" 
           data-action="toggle-mime-type" data-type="${item.type}" data-enabled="${isEnabled}">
@@ -151,6 +153,7 @@ function renderFilesResults() {
     // Show all files grouped by category
     const entries = Object.entries(state.files).filter(([_, files]) => files.length > 0);
     if (entries.length === 0) {
+      // TODO: don't embed stringified HTML in the javascript.
       container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📁</div><div class="empty-state-title">No Files</div><div class="empty-state-description">No files found. Click "Upload File" to add one.</div></div>`;
       return;
     }
@@ -161,6 +164,7 @@ function renderFilesResults() {
   } else {
     // Show files for specific category
     if (currentFiles.length === 0) {
+      // TODO: don't embed stringified HTML in the javascript.
       container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📁</div><div class="empty-state-title">No Files</div><div class="empty-state-description">No files found in this category.</div></div>`;
       return;
     }
@@ -200,6 +204,7 @@ function handleFilesSearch(inputElement) {
   const resultsContainer = document.getElementById('filesResults');
   if (resultsContainer) {
     if (totalFiles === 0 && !state.filesSearchQuery) {
+      // TODO: don't embed stringified HTML in the javascript.
       resultsContainer.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">📁</div>
@@ -214,6 +219,7 @@ function handleFilesSearch(inputElement) {
       `).join('');
     } else {
       if (currentFiles.length === 0) {
+        // TODO: don't embed stringified HTML in the javascript.
         resultsContainer.innerHTML = '<div class="empty-state" style="padding: 20px;"><div class="empty-state-description">No files in this category matching your search.</div></div>';
       } else {
         resultsContainer.innerHTML = `
@@ -230,11 +236,13 @@ function setFilesTab(tab) {
   loadFilesView();
 }
 
+// TODO: get these from files.ts DEFAULT_CATEGORIES somehow.
 function getCategoryIcon(category) {
   const icons = {
+    'concord': '🍇',
+    'clan_logos': '🏳️',
     'clan_icons': '🛡️',
-    'chat_badges': '⭐',
-    'branding': '🏳️'
+    'chat_badges': '⭐'
   };
   return icons[category] || '📁';
 }
@@ -249,11 +257,13 @@ function renderFileCard(file) {
   const uploadedDate = new Date(file.uploadedAt).toLocaleDateString();
 
   // Determine if this is a small image that should be upscaled with pixelated rendering
+  // TODO: We need to actually check the size of the image, not go by filename/category.
   const isSmallImage = file.name.toLowerCase().includes('48') ||
                        file.name.toLowerCase().includes('icon') ||
                        file.category === 'clan_icons' ||
                        file.category === 'chat_badges';
 
+  // TODO: don't embed stringified HTML in the javascript.
   return `
     <div class="compact-card" data-file-category="${file.category}" data-file-name="${escapeHtml(file.name)}">
       <div class="compact-card-icon" style="background: rgba(141, 240, 181, 0.1); display: flex; align-items: center; justify-content: center; overflow: hidden;">
@@ -378,7 +388,8 @@ function openUploadFileModal() {
   document.getElementById('uploadFileName').value = '';
 
   // Populate categories dynamically
-  const categories = state.filesCategories || ['clan_icons', 'chat_badges', 'branding'];
+  // TODO: get these from files.ts DEFAULT_CATEGORIES somehow.
+  const categories = state.filesCategories || ['concord', 'clan_logos', 'clan_icons', 'chat_badges'];
   const categorySelect = document.getElementById('uploadFileCategory');
   categorySelect.innerHTML = categories.map(cat =>
     `<option value="${cat}">${formatCategoryName(cat)}</option>`
