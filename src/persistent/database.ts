@@ -26,13 +26,19 @@ const client = postgres({
   database: postgresDatabase,
   user: postgresUser,
   password: postgresPassword,
-  max: 20, // Connection pool size
-  idle_timeout: 30,
-  connect_timeout: 10,
+  max: 1, // Single connection - only the Concord server needs access
+  idle_timeout: 1,
+  connect_timeout: 1,
 });
 
 // Create Drizzle instance with schema
 export const db = drizzle(client, { schema: { users, files, config } });
+
+// Enable relations on the Drizzle instance for db.query.config
+export const dbWithRelations = drizzle(client, {
+  schema: { users, files, config },
+  logger: false,
+});
 
 /**
  * Initializes the PostgreSQL database connection.
@@ -42,6 +48,15 @@ export async function initDatabase(): Promise<void> {
     // Test connection
     await client`SELECT 1`;
     console.log(`${colors.green}[database]${colors.reset} PostgreSQL connected!`);
+
+    // Ensure the config table exists (auto-create if missing)
+    await client`
+      CREATE TABLE IF NOT EXISTS config (
+        key TEXT PRIMARY KEY,
+        value JSONB NOT NULL DEFAULT '{}'
+      )
+    `;
+    console.log(`${colors.green}[database]${colors.reset} Config table verified`);
   } catch (error) {
     console.error(`${colors.red}[database]${colors.reset} PostgreSQL connection failed:`, error);
     throw error;

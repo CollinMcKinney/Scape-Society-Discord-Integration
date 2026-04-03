@@ -31,6 +31,7 @@ const RAW_RUNTIME_STATE =
           ["@swc-node/register", "virtual:9e6534a97da002d23301bc7ed8367017456b9533d62e7a2c204ad41bf248cb85df03954afd93281eeadb08d3f52395ab82fffcc79eb88d8fb38fbbd188a6c037#npm:1.11.1"],\
           ["@swc/cli", "virtual:9e6534a97da002d23301bc7ed8367017456b9533d62e7a2c204ad41bf248cb85df03954afd93281eeadb08d3f52395ab82fffcc79eb88d8fb38fbbd188a6c037#npm:0.8.0"],\
           ["@swc/core", "virtual:9e6534a97da002d23301bc7ed8367017456b9533d62e7a2c204ad41bf248cb85df03954afd93281eeadb08d3f52395ab82fffcc79eb88d8fb38fbbd188a6c037#npm:1.15.21"],\
+          ["@swc/types", "npm:0.1.26"],\
           ["@types/express", "npm:5.0.6"],\
           ["@types/node", "npm:25.5.0"],\
           ["@types/pg", "npm:8.20.0"],\
@@ -1036,7 +1037,7 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@sapphire/shapeshift", "npm:4.0.0"],\
           ["fast-deep-equal", "npm:3.1.3"],\
-          ["lodash", "npm:4.17.23"]\
+          ["lodash", "npm:4.18.1"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -2167,6 +2168,7 @@ const RAW_RUNTIME_STATE =
           ["@swc-node/register", "virtual:9e6534a97da002d23301bc7ed8367017456b9533d62e7a2c204ad41bf248cb85df03954afd93281eeadb08d3f52395ab82fffcc79eb88d8fb38fbbd188a6c037#npm:1.11.1"],\
           ["@swc/cli", "virtual:9e6534a97da002d23301bc7ed8367017456b9533d62e7a2c204ad41bf248cb85df03954afd93281eeadb08d3f52395ab82fffcc79eb88d8fb38fbbd188a6c037#npm:0.8.0"],\
           ["@swc/core", "virtual:9e6534a97da002d23301bc7ed8367017456b9533d62e7a2c204ad41bf248cb85df03954afd93281eeadb08d3f52395ab82fffcc79eb88d8fb38fbbd188a6c037#npm:1.15.21"],\
+          ["@swc/types", "npm:0.1.26"],\
           ["@types/express", "npm:5.0.6"],\
           ["@types/node", "npm:25.5.0"],\
           ["@types/pg", "npm:8.20.0"],\
@@ -3301,10 +3303,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["lodash", [\
-      ["npm:4.17.23", {\
-        "packageLocation": "./.yarn/cache/lodash-npm-4.17.23-50bdb1c01a-1264a90469.zip/node_modules/lodash/",\
+      ["npm:4.18.1", {\
+        "packageLocation": "./.yarn/cache/lodash-npm-4.18.1-a64c3070ac-757228fc68.zip/node_modules/lodash/",\
         "packageDependencies": [\
-          ["lodash", "npm:4.17.23"]\
+          ["lodash", "npm:4.18.1"]\
         ],\
         "linkType": "HARD"\
       }]\

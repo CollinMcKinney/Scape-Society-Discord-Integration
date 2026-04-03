@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Message, WebhookClient } from "discord.js";
 
 import { Packet, packetEvents, addPacket, type PacketObject, type SerializedPacket } from "./ephemeral/packets.ts";
 import { broadcast } from "./runelite.ts";
-import * as cache from "./ephemeral/cache.ts";
+import { getDiscordConfig, saveDiscordConfig, type DiscordConfig } from "./persistent/discord-config.ts";
 
 // ANSI color codes for console output
 const colors = {
@@ -13,42 +13,14 @@ const colors = {
   red: '\x1b[31m',
 };
 
-// Discord config cache key
-const DISCORD_CONFIG_KEY = "config:discord";
-
 // Lazy-initialized instances
 let bot: Client | null = null;
 let webhook: WebhookClient | null = null;
 let isConnected = false;
 
-interface DiscordConfig {
-  botToken?: string;
-  channelId?: string;
-  webhookUrl?: string;
-  permissionsInteger?: string;
-  clientId?: string;
-  clientSecret?: string;
-  redirectUri?: string;
-  discordInviteUrl?: string;
-}
-
 interface Attachment extends PacketObject {
   type: "image" | "video" | "file" | "link";
   url: string;
-}
-
-/**
- * Gets the stored Discord configuration from cache.
- */
-async function getDiscordConfig(): Promise<DiscordConfig> {
-  return (await cache.get(DISCORD_CONFIG_KEY)) || {};
-}
-
-/**
- * Saves the Discord configuration to cache.
- */
-async function saveDiscordConfig(config: DiscordConfig): Promise<void> {
-  await cache.set(DISCORD_CONFIG_KEY, config);
 }
 
 /**
@@ -340,11 +312,12 @@ packetEvents.on("packetAdded", async (packetJson: Packet | SerializedPacket) => 
 
 export {
   initDiscord,
-  getDiscordConfig,
-  saveDiscordConfig,
   getIsConnected,
   startDiscord,
   stopDiscord,
   updateDiscordConfig,
   getDiscordStatus,
 };
+
+// Re-export from persistent module for backward compatibility
+export { getDiscordConfig, saveDiscordConfig, type DiscordConfig } from "./persistent/discord-config.ts";

@@ -15,6 +15,7 @@
 import { execSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 // ============================================================================
 // Environment Detection
@@ -107,6 +108,59 @@ function getPublicIp() {
   return null;
 }
 
+function generateSecret(length = 32) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  for (let i = 0; i < length; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  return result;
+}
+
+function updateEnvPostgresCredentials() {
+  const envPath = path.resolve(process.cwd(), '.env');
+  const content = fs.existsSync(envPath)
+    ? fs.readFileSync(envPath, 'utf8')
+    : '';
+  const lines = content.split(/\r?\n/).filter(l => l.length > 0 || l === '');
+  let changed = false;
+
+  const keys = ['POSTGRES_USER', 'POSTGRES_PASSWORD'];
+  const existingKeys = {};
+
+  for (const line of lines) {
+    for (const key of keys) {
+      if (line.startsWith(`${key}=`)) {
+        existingKeys[key] = line.split('=')[1]?.trim();
+      }
+    }
+  }
+
+  if (!existingKeys.POSTGRES_USER) {
+    existingKeys.POSTGRES_USER = generateSecret(12);
+    lines.push(`POSTGRES_USER=${existingKeys.POSTGRES_USER}`);
+    changed = true;
+    console.log(`[bootstrap] Generated POSTGRES_USER=${existingKeys.POSTGRES_USER}`);
+  }
+
+  if (!existingKeys.POSTGRES_PASSWORD) {
+    existingKeys.POSTGRES_PASSWORD = generateSecret(32);
+    lines.push(`POSTGRES_PASSWORD=${existingKeys.POSTGRES_PASSWORD}`);
+    changed = true;
+    console.log(`[bootstrap] Generated POSTGRES_PASSWORD (hidden)`);
+  }
+
+  if (changed) {
+    fs.writeFileSync(envPath, `${lines.join('\n')}\n`, 'utf8');
+  } else {
+    console.log('[bootstrap] POSTGRES_USER and POSTGRES_PASSWORD already set');
+  }
+
+  return { user: existingKeys.POSTGRES_USER, password: existingKeys.POSTGRES_PASSWORD };
+}
+
 function updateEnvPublicIp(publicIp) {
   if (!publicIp) return { changed: false };
   const envPath = path.resolve(process.cwd(), '.env');
@@ -141,6 +195,8 @@ function updateEnvPublicIp(publicIp) {
 
 function runOnHost() {
   try {
+    updateEnvPostgresCredentials();
+
     const publicIp = getPublicIp();
     if (publicIp) {
       const { changed } = updateEnvPublicIp(publicIp);

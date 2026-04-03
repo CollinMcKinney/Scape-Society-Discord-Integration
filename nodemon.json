@@ -1,14 +1,1 @@
-{
-  "watch": ["."],
-  "ignore": [
-    ".git",
-    ".pnp.cjs",
-    ".pnp.loader.mjs",
-    ".yarn/build-state.yml",
-    ".yarn/install-state.gz",
-    "data/**"
-  ],
-  "exec": "yarn node --require @swc-node/register ./src/server.ts",
-  "legacyWatch": true,
-  "signal": "SIGINT"
-}
+{}

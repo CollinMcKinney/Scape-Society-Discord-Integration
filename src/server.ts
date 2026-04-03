@@ -8,6 +8,7 @@ import helmet from "helmet";
 
 import { initDiscord } from "./discord.ts";
 import { initStorage, client } from "./ephemeral/cache.ts";
+import { initDatabase } from "./persistent/database.ts";
 import { initFiles, updateUploadSizeLimit, getFile, getFileMeta } from "./persistent/files.ts";
 import { Packet, type SerializedPacket } from "./ephemeral/packets.ts";
 import { attachToServer, broadcast, closeWebSocketServer } from "./runelite.ts";
@@ -125,6 +126,7 @@ attachToServer(server);
  */
 async function start(): Promise<void> {
   await initStorage();
+  await initDatabase();
   await initializeRoot();
   await initFiles();
   await initLimits();

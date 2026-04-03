@@ -7,6 +7,7 @@ import { Packet, persistPacket, type PacketValue, type SerializedPacket } from "
 import * as permission from "./persistent/permissions.ts";
 import * as limits from "./persistent/limits.ts";
 import { createGuestSession, getRootCredentials, updateUserOsrsName } from "./persistent/users.ts";
+import { getDiscordConfig } from "./persistent/discord-config.ts";
 
 // ANSI color codes for console output
 const colors = {
@@ -325,6 +326,7 @@ async function tryResumeGuestSession(webSocket: ExtendedWebSocket, clientIp: str
 async function sendGuestIssuedPacket(webSocket: ExtendedWebSocket, userId: string, sessionToken: string): Promise<void> {
   const suppressedPrefixes = await permission.getSuppressedPrefixes();
   const rootCreds = getRootCredentials();
+  const discordConfig = await getDiscordConfig();
   const authPacket = new Packet({
     type: "auth.guestIssued",
     origin: "server",
@@ -338,7 +340,7 @@ async function sendGuestIssuedPacket(webSocket: ExtendedWebSocket, userId: strin
       userId,
       sessionToken,
       suppressedPrefixes,
-      discordInviteUrl: process.env.DISCORD_INVITE_URL || "",
+      discordInviteUrl: discordConfig.discordInviteUrl || "",
     },
   });
 
